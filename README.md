@@ -58,3 +58,4 @@ Synthetic data is fictional and must be described as such. Real examples require
 - 25–27 Nov: report and submission package; 5 Dec: final presentation
 
 See `docs/KICKOFF.md` and the named briefs in `docs/team/`.
+The authoritative source plan is copied to `docs/master-plan/` for every clone.
