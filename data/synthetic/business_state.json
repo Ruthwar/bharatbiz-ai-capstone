@@ -1,0 +1,8 @@
+{
+  "state_version": "synthetic-v2-seed-20261105",
+  "as_of_date": "2026-11-01",
+  "opening_cash_paise": 25000000,
+  "minimum_cash_buffer_paise": 5000000,
+  "source_type": "synthetic",
+  "note": "Fictional simulation state; currency is integer paise."
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "scenario_id": "SCN-001",
+    "name": "Baseline day",
+    "trigger": "Use starting operational state",
+    "expected": "Feasible plan or explicit infeasibility; enforce stock, supplier and cash constraints"
+  },
+  {
+    "scenario_id": "SCN-002",
+    "name": "Biscuit demand spike",
+    "trigger": "Increase biscuit demand by 60 percent for two simulated days",
+    "expected": "Recompute stock and orders; show unmet demand and replan"
+  },
+  {
+    "scenario_id": "SCN-003",
+    "name": "Supplier delay",
+    "trigger": "Delay one supplier by two days; balance date unknown",
+    "expected": "Compare alternatives; do not invent a revised date"
+  },
+  {
+    "scenario_id": "SCN-004",
+    "name": "Liquidity stress",
+    "trigger": "Delay a 3000000-paise retailer payment by seven days",
+    "expected": "Protect the 5000000-paise minimum buffer or report infeasible"
+  },
+  {
+    "scenario_id": "SCN-005",
+    "name": "Inventory discrepancy",
+    "trigger": "Physical count finds 15 fewer base units for one SKU",
+    "expected": "Reallocate without negative stock"
+  },
+  {
+    "scenario_id": "SCN-006",
+    "name": "Retailer complaint",
+    "trigger": "Late delivery complaint with product mention but no order ID",
+    "expected": "Preserve exact evidence and request clarification for unmatched order"
+  },
+  {
+    "scenario_id": "SCN-007",
+    "name": "Competitor report",
+    "trigger": "One uncorroborated promotion observation",
+    "expected": "Show as reported/unverified, not as established market fact"
+  },
+  {
+    "scenario_id": "SCN-008",
+    "name": "Combined disruption",
+    "trigger": "Demand increase, supplier delay and delayed payment together",
+    "expected": "Replan under hard constraints or explain infeasibility"
+  }
+]

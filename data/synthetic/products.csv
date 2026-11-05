@@ -1,0 +1,13 @@
+sku_id,category,product_name,pack_description,base_unit,units_per_case,unit_cost_paise,source_type
+SKU-001,Rice,Rice,5 kg bag,kg,500,8000,synthetic
+SKU-002,Rice,Rice,10 kg bag,kg,1000,8925,synthetic
+SKU-003,Cooking oil,Cooking oil,1 L pouch,litre,100,9850,synthetic
+SKU-004,Cooking oil,Cooking oil,5 L tin,litre,500,10775,synthetic
+SKU-005,Biscuits,Biscuits,family carton,pieces,240,11700,synthetic
+SKU-006,Biscuits,Biscuits,small carton,pieces,120,12625,synthetic
+SKU-007,Soap,Soap,case,pieces,144,13550,synthetic
+SKU-008,Shampoo,Shampoo,sachet carton,pieces,500,14475,synthetic
+SKU-009,Tea,Tea,1 kg pack,kg,100,15400,synthetic
+SKU-010,Beverage,Beverage,crate,pieces,24,16325,synthetic
+SKU-011,Detergent,Detergent,case,kg,120,17250,synthetic
+SKU-012,Toothpaste,Toothpaste,case,pieces,96,18175,synthetic
