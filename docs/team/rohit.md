@@ -6,7 +6,7 @@
 
 - Supplier comparison: price, MOQ, capacity, lead time and payment terms.
 - Supplier update extraction and linkage only when a reliable reference is stated.
-- Cash projection, available spending and minimum cash buffer, using integer paise/Decimal-safe calculations.
+- Cash projection, available spending and minimum cash buffer, using exact `Decimal` rupee calculations with two decimal places.
 
 ## Kickoff / first slice
 
