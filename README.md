@@ -20,15 +20,48 @@ uvicorn app.main:app --reload
 
 Open `/docs` for the API. The starter workflow is deterministic mock mode and requires no model key. Copy `.env.example` to `.env` only if needed; never commit secrets.
 
+## Primary demo: SCN-003 supplier delay
+
+The first vertical slice processes a two-day supplier delay for Cooking oil 1 L pouch. It preserves exact evidence and unknowns, calculates inventory/order impact, compares supplier and cash alternatives, selects a deterministic plan, independently verifies it, and leaves the recommendation pending human review.
+
+Run the repeatable no-key scenario:
+
+```powershell
+python scripts\run_scenario.py --scenario SCN-003 --mode mock
+```
+
+Start the API in one terminal:
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+Start Streamlit in a second terminal:
+
+```powershell
+streamlit run app\dashboard\home.py
+```
+
+Select **Run SCN-003** in the dashboard. Approve/reject changes only the demo session; no purchase, payment, stock update, or outbound message is executed.
+
+Install test dependencies and run the regression suite:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+The canonical input and explicit simulation assumptions are in `data/synthetic/scenario_fixtures/SCN-003.json`. The end-to-end design, verification contract, and reuse plan for LLM/RAG are in `docs/SCN-003_DESIGN.md`.
+
 ## Repository map
 
 - `app/schemas/` shared contracts
 - `app/agents/` specialist analysis modules
-- `app/orchestration/` mock workflow
-- `app/optimization/` initial allocation baseline
-- `app/verification/` independent checks
+- `app/orchestration/` deterministic mock workflow and SCN-003 vertical slice
+- `app/optimization/` deterministic allocation and candidate-plan baseline
+- `app/verification/` independent plan checks
 - `app/rag/` retrieval interface placeholder
-- `app/dashboard/` Streamlit entry point placeholder
+- `app/dashboard/` Streamlit SCN-003 decision and evidence display
 - `data/synthetic/` generated synthetic CSV/JSONL and data dictionary
 - `data/knowledge_docs/` approved/synthetic reference documents only
 - `data/pilot_deidentified/` reserved for authorized, de-identified pilot samples; empty by default
@@ -39,7 +72,7 @@ Open `/docs` for the API. The starter workflow is deterministic mock mode and re
 
 Generate the new plan-aligned pack with `python scripts/generate_synthetic_data.py --seed 20261105`. The script is deterministic for a fixed seed and labels every row synthetic. It creates 1,000 language examples and coherent, small operational tables for repeatable scenario work. The former v1 data pack remains in the parent folder as a historical reference; it is not the source of truth for this repo.
 
-Keep original text separate from extracted facts and inferences. Facts must include exact evidence spans; unknown dates, quantities, SKUs, order references and identities stay unknown. Use ISO dates, explicit units, integer paise for money and stable IDs.
+Keep original text separate from extracted facts and inferences. Facts must include exact evidence spans; unknown dates, quantities, SKUs, order references and identities stay unknown. Use ISO dates, explicit units, exact `Decimal` rupee values with two decimal places for money and stable IDs.
 
 ## Team workflow
 

@@ -6,6 +6,7 @@ import csv
 import json
 import random
 from datetime import date, timedelta
+from decimal import Decimal
 from pathlib import Path
 
 PRODUCTS = [
@@ -42,7 +43,8 @@ def generate(out: Path, seed: int) -> None:
     base = date(2026, 11, 1)
     products = [{"sku_id": f"SKU-{i+1:03}", "category": cat, "product_name": cat,
                  "pack_description": pack, "base_unit": unit, "units_per_case": units,
-                 "unit_cost_paise": (8000 + i * 925), "source_type": "synthetic"}
+                 "unit_cost_rupees": format(Decimal(80) + Decimal(i) * Decimal("9.25"), ".2f"),
+                 "source_type": "synthetic"}
                 for i, (cat, pack, unit, units) in enumerate(PRODUCTS)]
     suppliers = [{"supplier_id": f"SUP-{i+1:03}", "supplier_name": f"Synthetic Supplier {i+1}",
                   "lead_time_days": 1 + (i % 4), "payment_terms_days": [0, 7, 14][i % 3],
@@ -54,8 +56,9 @@ def generate(out: Path, seed: int) -> None:
     for s in suppliers:
         for p in products:
             if rng.random() < .72:
+                unit_cost = Decimal(p["unit_cost_rupees"]) + Decimal(rng.randint(-500, 1000)) / 100
                 offers.append({"supplier_id": s["supplier_id"], "sku_id": p["sku_id"],
-                               "unit_cost_paise": p["unit_cost_paise"] + rng.randint(-500, 1000),
+                               "unit_cost_rupees": format(unit_cost, ".2f"),
                                "min_order_units": rng.choice([1, 5, 10]), "capacity_units": rng.randint(40, 180),
                                "lead_time_days": s["lead_time_days"], "source_type": "synthetic"})
     inventory = [{"sku_id": p["sku_id"], "on_hand_units": rng.randint(30, 150),
@@ -89,13 +92,16 @@ def generate(out: Path, seed: int) -> None:
                            "status": "delivered", "source_type": "synthetic"})
     cash = [{"entry_id": f"CASH-{i+1:03}", "entry_date": (base - timedelta(days=29-i)).isoformat(),
              "entry_type": "inflow" if i % 3 == 0 else "outflow",
-             "amount_paise": 2500000 if i % 3 == 0 else -rng.randint(300000, 1000000),
-             "minimum_buffer_paise": 5000000, "source_type": "synthetic"} for i in range(30)]
+             "amount_rupees": format(
+                 Decimal(25000) if i % 3 == 0 else -Decimal(rng.randint(300000, 1000000)) / 100,
+                 ".2f",
+             ),
+             "minimum_buffer_rupees": "50000.00", "source_type": "synthetic"} for i in range(30)]
     scenarios = [
         {"scenario_id":"SCN-001","name":"Baseline day","trigger":"Use starting operational state","expected":"Feasible plan or explicit infeasibility; enforce stock, supplier and cash constraints"},
         {"scenario_id":"SCN-002","name":"Biscuit demand spike","trigger":"Increase biscuit demand by 60 percent for two simulated days","expected":"Recompute stock and orders; show unmet demand and replan"},
         {"scenario_id":"SCN-003","name":"Supplier delay","trigger":"Delay one supplier by two days; balance date unknown","expected":"Compare alternatives; do not invent a revised date"},
-        {"scenario_id":"SCN-004","name":"Liquidity stress","trigger":"Delay a 3000000-paise retailer payment by seven days","expected":"Protect the 5000000-paise minimum buffer or report infeasible"},
+        {"scenario_id":"SCN-004","name":"Liquidity stress","trigger":"Delay a ₹30,000.00 retailer payment by seven days","expected":"Protect the ₹50,000.00 minimum buffer or report infeasible"},
         {"scenario_id":"SCN-005","name":"Inventory discrepancy","trigger":"Physical count finds 15 fewer base units for one SKU","expected":"Reallocate without negative stock"},
         {"scenario_id":"SCN-006","name":"Retailer complaint","trigger":"Late delivery complaint with product mention but no order ID","expected":"Preserve exact evidence and request clarification for unmatched order"},
         {"scenario_id":"SCN-007","name":"Competitor report","trigger":"One uncorroborated promotion observation","expected":"Show as reported/unverified, not as established market fact"},
@@ -113,10 +119,10 @@ def generate(out: Path, seed: int) -> None:
     (out / "business_state.json").write_text(json.dumps({
         "state_version": "synthetic-v2-seed-" + str(seed),
         "as_of_date": base.isoformat(),
-        "opening_cash_paise": 25000000,
-        "minimum_cash_buffer_paise": 5000000,
+        "opening_cash_rupees": "250000.00",
+        "minimum_cash_buffer_rupees": "50000.00",
         "source_type": "synthetic",
-        "note": "Fictional simulation state; currency is integer paise."
+        "note": "Fictional simulation state; currency is exact decimal rupees."
     }, indent=2), encoding="utf-8")
     write_csv(out / "scenarios.csv", scenarios)
     (out / "scenarios.json").write_text(json.dumps(scenarios, indent=2), encoding="utf-8")
@@ -156,7 +162,7 @@ def generate(out: Path, seed: int) -> None:
     ], 1):
         (docs / f"SYN-DOC-{i:03}.txt").write_text(f"{title}\nSource: synthetic demonstration policy\nEffective date: 2026-11-01\n\n{body}\n", encoding="utf-8")
     (out / "DATA_DICTIONARY.md").write_text(
-        "# Synthetic dataset dictionary\n\nGenerated by `scripts/generate_synthetic_data.py`; all entities and events are fictional. Reproducible with a fixed seed. Currency is integer paise; quantities use the explicit `unit`/`base_unit` field. Dates are ISO 8601; timestamps include +05:30. `messages.jsonl` contains 1,000 labelled synthetic examples; `events.jsonl` has corresponding evidence-linked event annotations. Keep both separate from any permissioned pilot data. `scenarios.csv/json` provide eight repeatable cases. Supplier offers are valid only for listed supplier-SKU rows. No value represents verified local prices or business activity.\n\nTables: products, suppliers, retailers, supplier_products, inventory, historical_order_lines, open_orders, supplier_deliveries, cash_ledger, scenarios and messages/events. Stable IDs connect related rows. Unknown source facts must remain unknown.\n",
+        "# Synthetic dataset dictionary\n\nGenerated by `scripts/generate_synthetic_data.py`; all entities and events are fictional. Reproducible with a fixed seed. Currency is exact decimal rupees with two decimal places; quantities use the explicit `unit`/`base_unit` field. Dates are ISO 8601; timestamps include +05:30. `messages.jsonl` contains 1,000 labelled synthetic examples; `events.jsonl` has corresponding evidence-linked event annotations. Keep both separate from any permissioned pilot data. `scenarios.csv/json` provide eight repeatable cases. Supplier offers are valid only for listed supplier-SKU rows. No value represents verified local prices or business activity.\n\nTables: products, suppliers, retailers, supplier_products, inventory, historical_order_lines, open_orders, supplier_deliveries, cash_ledger, scenarios and messages/events. Stable IDs connect related rows. Unknown source facts must remain unknown.\n",
         encoding="utf-8")
     print(f"Generated synthetic pack at {out} (seed={seed}, messages={len(messages)}, scenarios={len(scenarios)})")
 

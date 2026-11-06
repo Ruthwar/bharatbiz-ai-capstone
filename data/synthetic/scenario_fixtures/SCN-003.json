@@ -1,0 +1,25 @@
+{
+  "scenario_id": "SCN-003",
+  "name": "Supplier delay",
+  "message": {
+    "message_id": "DEMO-SCN-003-001",
+    "source_type": "supplier_update",
+    "text": "Supplier SUP-005 reports a two-day delay for Cooking oil 1 L pouch; revised date is not confirmed.",
+    "observed_at": "2026-11-01T09:00:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v2-seed-20261105"
+  },
+  "assumptions": {
+    "sku_id": "SKU-003",
+    "original_supplier_id": "SUP-005",
+    "delayed_incoming_units": 12,
+    "planning_horizon": "2026-11-04",
+    "procurement_costs": "immediate_outflow"
+  },
+  "unknowns": [
+    "supplier_confirmed_revised_delivery_date",
+    "source_stated_delayed_quantity",
+    "purchase_order_reference"
+  ]
+}

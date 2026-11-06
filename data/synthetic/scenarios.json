@@ -20,8 +20,8 @@
   {
     "scenario_id": "SCN-004",
     "name": "Liquidity stress",
-    "trigger": "Delay a 3000000-paise retailer payment by seven days",
-    "expected": "Protect the 5000000-paise minimum buffer or report infeasible"
+    "trigger": "Delay a ₹30,000.00 retailer payment by seven days",
+    "expected": "Protect the ₹50,000.00 minimum buffer or report infeasible"
   },
   {
     "scenario_id": "SCN-005",
