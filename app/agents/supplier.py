@@ -19,6 +19,7 @@ def build_supplier_options(
         return []
 
     options = []
+    supplier_names = {row["supplier_id"]: row.get("supplier_name", "") for row in state.suppliers}
     offers = sorted(
         (row for row in state.supplier_offers if row["sku_id"] == sku_id),
         key=lambda row: row["supplier_id"],
@@ -35,6 +36,7 @@ def build_supplier_options(
         options.append(
             SupplierOption(
                 supplier_id=offer["supplier_id"],
+                supplier_name=supplier_names.get(offer["supplier_id"], ""),
                 sku_id=sku_id,
                 quantity_units=quantity,
                 unit_cost_rupees=offer["unit_cost_rupees"],

@@ -1,4 +1,8 @@
 import json
+import os
+
+os.environ["LLM_PROVIDER"] = "none"
+
 from pathlib import Path
 
 import pytest

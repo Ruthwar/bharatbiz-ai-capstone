@@ -68,7 +68,7 @@ Money never appears in the message contract. It comes from the versioned state.
   "message": {
     "message_id": "DEMO-SCN-003-001",
     "source_type": "supplier_update",
-    "text": "Supplier SUP-005 reports a two-day delay for Cooking oil 1 L pouch; revised date is not confirmed.",
+    "text": "Sri Venkateswara FMCG Supply reports a two-day delay for Cooking oil 1 L pouch; revised date is not confirmed.",
     "observed_at": "2026-11-01T09:00:00+05:30",
     "language": "English",
     "consent_status": "synthetic",
@@ -365,7 +365,8 @@ The recommendation never includes an execution command, a purchase order, or a p
 ## 7. Worked result
 
 ```text
-Message:        SUP-005 reports a two-day delay for Cooking oil 1 L pouch
+Message:        Sri Venkateswara FMCG Supply reports a two-day delay for Cooking oil 1 L pouch
+Supplier:       SUP-005 (resolved from the written trade name)
 SKU:            SKU-003 (inference)
 Inventory:      68 L before delay, 56 L immediately usable
 Orders:         6 open, 102 L requested
@@ -491,6 +492,8 @@ python -m pytest -q
 ```
 
 ## 13. Reuse for real AI and RAG
+
+> The accepted intake design (open-world taxonomy, slot-filling, acknowledgement rules, triage and approval expiry) is specified in `docs/INTAKE_DESIGN.md`. This section remains the reference for what in the decision spine is reused unchanged.
 
 ### 13.1 Short answer
 

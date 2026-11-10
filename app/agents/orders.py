@@ -14,7 +14,15 @@ def affected_orders(state: BusinessState, sku_id: str) -> list[dict]:
 
 
 def analyze_orders(state: BusinessState, sku_id: str) -> AgentResult:
-    orders = affected_orders(state, sku_id)
+    retailers = {row["retailer_id"]: row for row in state.retailers}
+    orders = [
+        {
+            **row,
+            "retailer_name": retailers.get(row["retailer_id"], {}).get("retailer_name", ""),
+            "area": retailers.get(row["retailer_id"], {}).get("area", ""),
+        }
+        for row in affected_orders(state, sku_id)
+    ]
     return AgentResult(
         agent_name="orders",
         status="ok",

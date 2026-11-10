@@ -1,6 +1,6 @@
 supplier_id,supplier_name,lead_time_days,payment_terms_days,source_type
-SUP-001,Synthetic Supplier 1,1,0,synthetic
-SUP-002,Synthetic Supplier 2,2,7,synthetic
-SUP-003,Synthetic Supplier 3,3,14,synthetic
-SUP-004,Synthetic Supplier 4,4,0,synthetic
-SUP-005,Synthetic Supplier 5,1,7,synthetic
+SUP-001,Shree Ganesh Trading Co,1,0,synthetic
+SUP-002,Balaji Wholesale Distributors,2,7,synthetic
+SUP-003,Krishna Rice Mills,3,14,synthetic
+SUP-004,Anand Oil Agencies,4,0,synthetic
+SUP-005,Sri Venkateswara FMCG Supply,1,7,synthetic

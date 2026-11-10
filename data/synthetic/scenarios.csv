@@ -2,7 +2,7 @@ scenario_id,name,trigger,expected
 SCN-001,Baseline day,Use starting operational state,"Feasible plan or explicit infeasibility; enforce stock, supplier and cash constraints"
 SCN-002,Biscuit demand spike,Increase biscuit demand by 60 percent for two simulated days,Recompute stock and orders; show unmet demand and replan
 SCN-003,Supplier delay,Delay one supplier by two days; balance date unknown,Compare alternatives; do not invent a revised date
-SCN-004,Liquidity stress,Delay a 3000000-paise retailer payment by seven days,Protect the 5000000-paise minimum buffer or report infeasible
+SCN-004,Liquidity stress,"Delay a ₹30,000.00 retailer payment by seven days","Protect the ₹50,000.00 minimum buffer or report infeasible"
 SCN-005,Inventory discrepancy,Physical count finds 15 fewer base units for one SKU,Reallocate without negative stock
 SCN-006,Retailer complaint,Late delivery complaint with product mention but no order ID,Preserve exact evidence and request clarification for unmatched order
 SCN-007,Competitor report,One uncorroborated promotion observation,"Show as reported/unverified, not as established market fact"
