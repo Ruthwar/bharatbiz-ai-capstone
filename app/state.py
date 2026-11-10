@@ -76,6 +76,7 @@ def load_business_state(data_dir: Path | None = None, expected_version: str | No
     )
     open_orders = _read_csv(base / "open_orders.csv", {"quantity_units"})
     suppliers = _read_csv(base / "suppliers.csv", {"lead_time_days", "payment_terms_days"})
+    retailers = _read_csv(base / "retailers.csv", set())
     supplier_offers = _read_csv(
         base / "supplier_products.csv",
         {"min_order_units", "capacity_units", "lead_time_days"},
@@ -86,6 +87,7 @@ def load_business_state(data_dir: Path | None = None, expected_version: str | No
     _require_unique(inventory, "sku_id", "inventory.csv")
     _require_unique(open_orders, "order_id", "open_orders.csv")
     _require_unique(suppliers, "supplier_id", "suppliers.csv")
+    _require_unique(retailers, "retailer_id", "retailers.csv")
 
     return BusinessState(
         state_version=raw["state_version"],
@@ -94,6 +96,7 @@ def load_business_state(data_dir: Path | None = None, expected_version: str | No
         inventory=inventory,
         open_orders=open_orders,
         suppliers=suppliers,
+        retailers=retailers,
         supplier_offers=supplier_offers,
         cash_balance_rupees=cash_balance,
         minimum_cash_buffer_rupees=minimum_buffer,

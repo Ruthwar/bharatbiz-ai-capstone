@@ -1,12 +1,18 @@
 import hashlib
-import re
+import logging
 from datetime import date
 from pathlib import Path
 
 from app.agents.inventory import analyze_inventory
 from app.agents.orders import analyze_orders
 from app.agents.supplier import build_supplier_options
+from app.extraction import configured_extractor, validate_extraction
+from app.extraction.base import Extraction
+from app.extraction.llm import ExtractionError
+from app.extraction.rules import RulesExtractor
 from app.optimization.baseline import build_candidate_plans, select_best_plan
+from app.orchestration import router
+from app.orchestration.taxonomy import TAXONOMY_VERSION, UNCLASSIFIED
 from app.schemas.contracts import (
     BusinessEvent,
     BusinessState,
@@ -17,29 +23,7 @@ from app.schemas.contracts import (
 from app.state import load_business_state
 from app.verification.checks import verify_plan
 
-RULES = (
-    ("supplier_delay", re.compile(r"delay|late|postpon", re.I)),
-    ("delivery_complaint", re.compile(r"delivery|delivered|arriv", re.I)),
-    ("product_request", re.compile(r"request|need|asking|pack", re.I)),
-    ("scheme_question", re.compile(r"scheme|offer|discount", re.I)),
-    ("competitor_observation", re.compile(r"competitor|nearby shop", re.I)),
-)
-DELAY_PATTERN = re.compile(
-    r"\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten)[-\s]days?\s+delay\b",
-    re.I,
-)
-DAY_WORDS = {
-    "one": 1,
-    "two": 2,
-    "three": 3,
-    "four": 4,
-    "five": 5,
-    "six": 6,
-    "seven": 7,
-    "eight": 8,
-    "nine": 9,
-    "ten": 10,
-}
+logger = logging.getLogger(__name__)
 
 
 def _stable_id(prefix: str, *parts: str) -> str:
@@ -57,44 +41,51 @@ def _fact(field: str, value: str, text: str, start: int, end: int) -> EvidenceFa
     )
 
 
-def _base_event(message: MessageSubmission, event_type: str) -> BusinessEvent:
+def _extract(message: MessageSubmission, state: BusinessState) -> Extraction:
+    extractor = configured_extractor()
+    if extractor.name == "rules":
+        extraction = extractor.extract(message, state)
+        validate_extraction(extraction, message, state)
+        return extraction
+
+    try:
+        extraction = extractor.extract(message, state)
+        violations = validate_extraction(extraction, message, state)
+        if violations:
+            raise ExtractionError("; ".join(violations))
+        return extraction
+    except Exception as exc:
+        logger.warning(
+            "extraction_fallback extractor=%s message_id=%s reason=%s",
+            extractor.name,
+            message.message_id,
+            type(exc).__name__,
+        )
+        fallback = RulesExtractor().extract(message, state)
+        validate_extraction(fallback, message, state)
+        fallback.uncertainties.append(
+            "Model extraction was unavailable or failed validation; deterministic rules were used."
+        )
+        return fallback
+
+
+def _base_event(message: MessageSubmission, extraction: Extraction) -> BusinessEvent:
     return BusinessEvent(
         event_id=_stable_id("evt", message.message_id, message.text, message.state_version),
         source_message_ids=[message.message_id],
-        event_type=event_type,
+        event_type=extraction.primary_intent,
+        intents=extraction.intents,
+        taxonomy_version=TAXONOMY_VERSION,
+        extracted_facts=list(extraction.facts),
+        inferences=dict(extraction.inferences),
         uncertainties=["Product, quantity, date or business reference not asserted unless explicitly extracted."],
         state_version=message.state_version,
     )
 
 
-def _resolve_product(state: BusinessState, text: str) -> dict | None:
-    full_matches = []
-    category_matches = []
-    for product in state.products:
-        full_label = f"{product['product_name']} {product['pack_description']}"
-        full_match = re.search(re.escape(full_label), text, re.I)
-        if full_match:
-            full_matches.append((product, full_label, full_match))
-        category_match = re.search(rf"\b{re.escape(product['product_name'])}\b", text, re.I)
-        if category_match:
-            category_matches.append((product, product["product_name"], category_match))
-
-    matches = full_matches or category_matches
-    sku_ids = {product["sku_id"] for product, _, _ in matches}
-    if len(sku_ids) != 1:
-        return None
-    product, label, match = matches[0]
-    return {
-        "sku_id": product["sku_id"],
-        "unit": product["base_unit"],
-        "label": label,
-        "start": match.start(),
-        "end": match.end(),
-        "match_type": "product_and_pack" if full_matches else "product_name",
-    }
-
-
-def _clarification_response(message: MessageSubmission, event: BusinessEvent, reason: str) -> dict:
+def _clarification_response(
+    message: MessageSubmission, event: BusinessEvent, extraction: Extraction, reason: str
+) -> dict:
     event.status = "needs_clarification"
     event.uncertainties.append(reason)
     recommendation = Recommendation(
@@ -113,59 +104,59 @@ def _clarification_response(message: MessageSubmission, event: BusinessEvent, re
         "selected_plan": None,
         "verification": None,
         "trace": ["received", "event_extracted", "needs_clarification"],
-        "mode": "rules_mock",
+        "mode": extraction.mode,
     }
 
 
-def _process_supplier_delay(message: MessageSubmission, event: BusinessEvent, data_dir: Path | None) -> dict:
-    state = load_business_state(data_dir=data_dir, expected_version=message.state_version)
-    supplier_match = re.search(r"\b(SUP-\d{3})\b", message.text, re.I)
-    delay_match = DELAY_PATTERN.search(message.text)
-    product = _resolve_product(state, message.text)
-
-    if supplier_match:
-        event.extracted_facts.append(
-            _fact("supplier_id", supplier_match.group(1).upper(), message.text, *supplier_match.span(1))
-        )
-    if delay_match:
-        raw_delay = delay_match.group(1).lower()
-        delay_days = int(raw_delay) if raw_delay.isdigit() else DAY_WORDS[raw_delay]
-        delay_span = message.text[delay_match.start():delay_match.end()].split()[0]
-        delay_start = delay_match.start()
-        delay_end = delay_start + len(delay_span)
-        event.extracted_facts.append(
-            _fact("delay_days", str(delay_days), message.text, delay_start, delay_end)
-        )
-    if product:
-        event.extracted_facts.append(
-            _fact("product", product["label"], message.text, product["start"], product["end"])
-        )
-        event.inferences["catalogue_sku_id"] = product["sku_id"]
+def _process_supplier_delay(
+    message: MessageSubmission,
+    event: BusinessEvent,
+    extraction: Extraction,
+    state: BusinessState,
+    data_dir: Path | None = None,
+) -> dict:
+    supplier_fact = extraction.fact("supplier_id")
+    delay_fact = extraction.fact("delay_days")
+    sku_id = extraction.inferences.get("catalogue_sku_id")
+    product_row = next((row for row in state.products if row["sku_id"] == sku_id), None)
 
     missing = []
-    if not supplier_match:
+    if not supplier_fact:
         missing.append("supplier reference")
-    if not delay_match:
+    if not delay_fact:
         missing.append("delay duration")
-    if not product:
+    if not product_row:
         missing.append("an unambiguous product and pack")
     if missing:
         return _clarification_response(
             message,
             event,
+            extraction,
             "Unable to resolve " + ", ".join(missing) + " from the source and synthetic catalogue.",
         )
+
+    supplier_id = supplier_fact.value
+    supplier_label = next(
+        (
+            f"{row['supplier_name']} ({supplier_id})"
+            for row in state.suppliers
+            if row["supplier_id"] == supplier_id and row.get("supplier_name")
+        ),
+        supplier_id,
+    )
+    delay_days = int(delay_fact.value)
+    unit = product_row["base_unit"]
 
     event.uncertainties = [
         "Supplier-confirmed revised delivery date is unknown.",
         "Source-stated delayed quantity is unknown.",
         "Purchase-order reference is unknown.",
-    ]
+    ] + [item for item in extraction.uncertainties if item not in event.uncertainties]
 
-    inventory_row = next(row for row in state.inventory if row["sku_id"] == product["sku_id"])
+    inventory_row = next(row for row in state.inventory if row["sku_id"] == sku_id)
     delayed_incoming_units = inventory_row["incoming_units"]
-    inventory = analyze_inventory(state, product["sku_id"], delayed_incoming_units)
-    orders = analyze_orders(state, product["sku_id"])
+    inventory = analyze_inventory(state, sku_id, delayed_incoming_units)
+    orders = analyze_orders(state, sku_id)
     affected = orders.proposal["affected_orders"]
     planning_horizon = max(
         (date.fromisoformat(row["requested_delivery_date"]) for row in affected),
@@ -173,7 +164,7 @@ def _process_supplier_delay(message: MessageSubmission, event: BusinessEvent, da
     )
     event.inferences["scenario_planning_horizon"] = planning_horizon.isoformat()
     event.inferences["delayed_incoming_assumption"] = (
-        f"{delayed_incoming_units} {product['unit']} units from {supplier_match.group(1).upper()}"
+        f"{delayed_incoming_units} {unit} units from {supplier_label}"
     )
 
     required_units = max(
@@ -182,15 +173,15 @@ def _process_supplier_delay(message: MessageSubmission, event: BusinessEvent, da
     )
     supplier_options = build_supplier_options(
         state,
-        product["sku_id"],
+        sku_id,
         required_units,
-        supplier_match.group(1).upper(),
+        supplier_id,
         delay_days,
         planning_horizon,
     )
     candidates = build_candidate_plans(
         state,
-        product["sku_id"],
+        sku_id,
         inventory.proposal["immediately_available_units"],
         supplier_options,
         planning_horizon,
@@ -204,17 +195,20 @@ def _process_supplier_delay(message: MessageSubmission, event: BusinessEvent, da
     ]
     warnings = []
     if selected.late_units:
-        warnings.append(f"{selected.late_units} {product['unit']} units remain late in the selected plan.")
+        warnings.append(f"{selected.late_units} {unit} units remain late in the selected plan.")
     if selected.unmet_units:
-        warnings.append(f"{selected.unmet_units} {product['unit']} units remain unmet in the selected plan.")
+        warnings.append(f"{selected.unmet_units} {unit} units remain unmet in the selected plan.")
     if not verification.valid:
         warnings.extend(verification.violations)
 
     if selected.supplier_option:
         option = selected.supplier_option
+        option_label = (
+            f"{option.supplier_name} ({option.supplier_id})" if option.supplier_name else option.supplier_id
+        )
         summary = (
-            f"Recommended scenario option: {option.quantity_units} {product['unit']} units from "
-            f"{option.supplier_id}; {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
+            f"Recommended scenario option: {option.quantity_units} {unit} units from "
+            f"{option_label}; {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
             f"{selected.late_units} late, {selected.unmet_units} unmet. Awaiting human review."
         )
     else:
@@ -250,23 +244,40 @@ def _process_supplier_delay(message: MessageSubmission, event: BusinessEvent, da
             "independently_verified",
             "pending_human_review",
         ],
-        "mode": "rules_mock",
+        "mode": extraction.mode,
     }
 
 
-def process_message(message: MessageSubmission, data_dir: Path | None = None) -> dict:
-    event_type = next((name for name, pattern in RULES if pattern.search(message.text)), "other")
-    event = _base_event(message, event_type)
-    if event_type == "supplier_delay":
-        return _process_supplier_delay(message, event, data_dir)
-
-    match = next((match for _, pattern in RULES if (match := pattern.search(message.text))), None)
-    if match:
-        event.extracted_facts.append(
-            _fact("trigger_phrase", match.group(0), message.text, match.start(), match.end())
-        )
+def _event_only(message: MessageSubmission, event: BusinessEvent, extraction: Extraction) -> dict:
+    primary = next((match for match in extraction.intents if match.intent == event.event_type), None)
+    if primary and primary.evidence_span:
+        start = message.text.find(primary.evidence_span)
+        if start >= 0:
+            event.extracted_facts.append(
+                _fact("trigger_phrase", primary.evidence_span, message.text, start, start + len(primary.evidence_span))
+            )
+    if event.event_type == UNCLASSIFIED:
+        event.uncertainties.append("Message did not match a known intent; routed to human triage.")
     return {
         "message": message.model_dump(mode="json"),
         "event": event.model_dump(mode="json"),
-        "mode": "rules_mock",
+        "trace": ["received", "state_loaded", "event_extracted", "routed_to_triage"],
+        "mode": extraction.mode,
     }
+
+
+router.register("supplier_delay", _process_supplier_delay)
+
+
+def process_message(message: MessageSubmission, data_dir: Path | None = None) -> dict:
+    state = load_business_state(data_dir=data_dir, expected_version=message.state_version)
+    extraction = _extract(message, state)
+    event = _base_event(message, extraction)
+    handler = router.resolve(extraction.primary_intent)
+    if handler is not None:
+        result = handler(message, event, extraction, state, data_dir)
+    else:
+        result = _event_only(message, event, extraction)
+    result["routed_action"] = router.routed_action(extraction.primary_intent)
+    result["taxonomy_version"] = TAXONOMY_VERSION
+    return result

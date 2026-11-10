@@ -1,21 +1,21 @@
-retailer_id,area,service_priority,source_type,verified_business
-RET-001,Area-1,normal,synthetic,false
-RET-002,Area-2,normal,synthetic,false
-RET-003,Area-3,high,synthetic,false
-RET-004,Area-4,normal,synthetic,false
-RET-005,Area-1,normal,synthetic,false
-RET-006,Area-2,high,synthetic,false
-RET-007,Area-3,normal,synthetic,false
-RET-008,Area-4,normal,synthetic,false
-RET-009,Area-1,high,synthetic,false
-RET-010,Area-2,normal,synthetic,false
-RET-011,Area-3,normal,synthetic,false
-RET-012,Area-4,high,synthetic,false
-RET-013,Area-1,normal,synthetic,false
-RET-014,Area-2,normal,synthetic,false
-RET-015,Area-3,high,synthetic,false
-RET-016,Area-4,normal,synthetic,false
-RET-017,Area-1,normal,synthetic,false
-RET-018,Area-2,high,synthetic,false
-RET-019,Area-3,normal,synthetic,false
-RET-020,Area-4,normal,synthetic,false
+retailer_id,retailer_name,shop_type,area,service_priority,source_type,verified_business
+RET-001,Sri Sai Kirana Store,kirana,Kukatpally,normal,synthetic,false
+RET-002,New Balaji General Store,general_store,Ameerpet,normal,synthetic,false
+RET-003,Lakshmi Provision Store,provision_store,Dilsukhnagar,high,synthetic,false
+RET-004,Ganesh Supermarket,supermarket,Secunderabad,normal,synthetic,false
+RET-005,Sai Ram Mini Market,mini_market,Kukatpally,normal,synthetic,false
+RET-006,Maa Bhagya Kirana,kirana,Ameerpet,high,synthetic,false
+RET-007,Sri Krishna Stores,general_store,Dilsukhnagar,normal,synthetic,false
+RET-008,Anjaneya General Stores,general_store,Secunderabad,normal,synthetic,false
+RET-009,Padmavathi Kirana,kirana,Kukatpally,high,synthetic,false
+RET-010,Royal Mart Express,convenience_store,Ameerpet,normal,synthetic,false
+RET-011,New Sai Kirana,kirana,Dilsukhnagar,normal,synthetic,false
+RET-012,Bhagyalakshmi Stores,provision_store,Secunderabad,high,synthetic,false
+RET-013,Sri Laxmi Traders,wholesale_retail,Kukatpally,normal,synthetic,false
+RET-014,Om Sai Provision Store,provision_store,Ameerpet,normal,synthetic,false
+RET-015,Venkateswara Kirana,kirana,Dilsukhnagar,high,synthetic,false
+RET-016,Sneha General Store,general_store,Secunderabad,normal,synthetic,false
+RET-017,Sri Vinayaka Stores,general_store,Kukatpally,normal,synthetic,false
+RET-018,Mahalakshmi Mini Mart,mini_market,Ameerpet,high,synthetic,false
+RET-019,Sai Datta Kirana,kirana,Dilsukhnagar,normal,synthetic,false
+RET-020,New Krishna Provision,provision_store,Secunderabad,normal,synthetic,false

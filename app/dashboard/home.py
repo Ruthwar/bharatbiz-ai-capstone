@@ -16,9 +16,20 @@ def format_rupees(value: str) -> str:
     return f"₹{Decimal(str(value)):,.2f}"
 
 
+def inference_note() -> str:
+    try:
+        with urllib.request.urlopen(f"{API_URL}/api/v1/status", timeout=5) as response:
+            status = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, ValueError):
+        return "Inference status unavailable — start the API"
+    if not status["llm_enabled"]:
+        return "LLM inference: OFF — deterministic rules only"
+    return f"LLM inference: ON — {status['model']}"
+
+
 st.set_page_config(page_title="BharatBiz AI — SCN-003", layout="wide")
 st.title("BharatBiz AI — Supplier Delay Demo")
-st.info("Academic synthetic simulation · Mock mode · No live integrations or autonomous actions")
+st.info(f"Academic synthetic simulation · {inference_note()} · No live integrations or autonomous actions")
 
 fixture = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
 message_text = st.text_area("Supplier update", fixture["message"]["text"], height=90)
@@ -94,7 +105,9 @@ st.dataframe(
     [
         {
             "Order": row["order_id"],
-            "Retailer": row["retailer_id"],
+            "Retailer": row.get("retailer_name") or row["retailer_id"],
+            "Area": row.get("area", ""),
+            "Retailer ID": row["retailer_id"],
             "Requested date": row["requested_delivery_date"],
             "Quantity": row["quantity_units"],
             "Priority": row["priority"],
@@ -109,7 +122,8 @@ st.subheader("3. Supplier and cash alternatives")
 st.dataframe(
     [
         {
-            "Supplier": option["supplier_id"],
+            "Supplier": option.get("supplier_name") or option["supplier_id"],
+            "Supplier ID": option["supplier_id"],
             "Quantity": option["quantity_units"],
             "Unit cost": format_rupees(option["unit_cost_rupees"]),
             "Total cost": format_rupees(option["total_cost_rupees"]),

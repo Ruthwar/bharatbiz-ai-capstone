@@ -53,15 +53,31 @@ python -m pytest -q
 
 The canonical input and explicit simulation assumptions are in `data/synthetic/scenario_fixtures/SCN-003.json`. The end-to-end design, verification contract, and reuse plan for LLM/RAG are in `docs/SCN-003_DESIGN.md`.
 
+## Open-ended message intake
+
+`POST /api/v1/inbound` accepts a free-form message from a retailer, supplier or sales visit. It always returns a template receipt, may ask one question to complete required details, and then routes the event to a handler or to human triage. The design is specified in `docs/INTAKE_DESIGN.md`.
+
+```powershell
+uvicorn app.main:app --reload
+streamlit run app\dashboard\chat.py
+```
+
+The chat page has an intake tab and a review queue. Selecting a sender in the UI simulates channel identity; a real channel derives it from the authenticated account. Receipt and completion acknowledgements are the only automated outbound text. No action executes without human approval.
+
+Model extraction is optional. With `LLM_PROVIDER=none` (the default) the deterministic rules extractor is used. To enable a provider, copy `.env.example` to `.env` (the app loads it automatically) and set `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, and `LLM_CA_BUNDLE` if the endpoint uses a private CA. Verify the connection with `python scripts/check_llm.py`. Never commit `.env`; extraction output is validated against the schema, exact evidence spans and the product catalogue, and falls back to rules on failure.
+
 ## Repository map
 
 - `app/schemas/` shared contracts
 - `app/agents/` specialist analysis modules
-- `app/orchestration/` deterministic mock workflow and SCN-003 vertical slice
+- `app/extraction/` extraction interface: rules and LLM adapters plus pre-plan validation gates
+- `app/channels/` channel adapters (demo chat; WhatsApp would normalise into the same contract)
+- `app/orchestration/` taxonomy, slot specs, intent router, inbound flow and SCN-003 vertical slice
 - `app/optimization/` deterministic allocation and candidate-plan baseline
 - `app/verification/` independent plan checks
+- `app/store/` in-memory inbound ledger for dedup and the human review queue
 - `app/rag/` retrieval interface placeholder
-- `app/dashboard/` Streamlit SCN-003 decision and evidence display
+- `app/dashboard/` Streamlit SCN-003 decision display and the open-ended intake page
 - `data/synthetic/` generated synthetic CSV/JSONL and data dictionary
 - `data/knowledge_docs/` approved/synthetic reference documents only
 - `data/pilot_deidentified/` reserved for authorized, de-identified pilot samples; empty by default

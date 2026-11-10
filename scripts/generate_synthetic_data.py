@@ -17,6 +17,36 @@ PRODUCTS = [
     ("Tea", "1 kg pack", "kg", 100), ("Beverage", "crate", "pieces", 24),
     ("Detergent", "case", "kg", 120), ("Toothpaste", "case", "pieces", 96),
 ]
+SUPPLIERS = [
+    ("Shree Ganesh Trading Co", 1, 0),
+    ("Balaji Wholesale Distributors", 2, 7),
+    ("Krishna Rice Mills", 3, 14),
+    ("Anand Oil Agencies", 4, 0),
+    ("Sri Venkateswara FMCG Supply", 1, 7),
+]
+LOCALITIES = ["Kukatpally", "Ameerpet", "Dilsukhnagar", "Secunderabad"]
+RETAILERS = [
+    ("Sri Sai Kirana Store", "kirana"),
+    ("New Balaji General Store", "general_store"),
+    ("Lakshmi Provision Store", "provision_store"),
+    ("Ganesh Supermarket", "supermarket"),
+    ("Sai Ram Mini Market", "mini_market"),
+    ("Maa Bhagya Kirana", "kirana"),
+    ("Sri Krishna Stores", "general_store"),
+    ("Anjaneya General Stores", "general_store"),
+    ("Padmavathi Kirana", "kirana"),
+    ("Royal Mart Express", "convenience_store"),
+    ("New Sai Kirana", "kirana"),
+    ("Bhagyalakshmi Stores", "provision_store"),
+    ("Sri Laxmi Traders", "wholesale_retail"),
+    ("Om Sai Provision Store", "provision_store"),
+    ("Venkateswara Kirana", "kirana"),
+    ("Sneha General Store", "general_store"),
+    ("Sri Vinayaka Stores", "general_store"),
+    ("Mahalakshmi Mini Mart", "mini_market"),
+    ("Sai Datta Kirana", "kirana"),
+    ("New Krishna Provision", "provision_store"),
+]
 INTENTS = ["delivery_complaint", "damaged_item", "missing_item", "product_request", "scheme_question", "supplier_delay", "competitor_observation", "other"]
 TEMPLATES = {
     "delivery_complaint": ["Delivery for {product} arrived late at shop {retailer}.", "We are still waiting for the {product} order; please check delivery."],
@@ -46,12 +76,14 @@ def generate(out: Path, seed: int) -> None:
                  "unit_cost_rupees": format(Decimal(80) + Decimal(i) * Decimal("9.25"), ".2f"),
                  "source_type": "synthetic"}
                 for i, (cat, pack, unit, units) in enumerate(PRODUCTS)]
-    suppliers = [{"supplier_id": f"SUP-{i+1:03}", "supplier_name": f"Synthetic Supplier {i+1}",
-                  "lead_time_days": 1 + (i % 4), "payment_terms_days": [0, 7, 14][i % 3],
-                  "source_type": "synthetic"} for i in range(5)]
-    retailers = [{"retailer_id": f"RET-{i+1:03}", "area": f"Area-{i % 4 + 1}",
+    suppliers = [{"supplier_id": f"SUP-{i+1:03}", "supplier_name": name,
+                  "lead_time_days": lead_time, "payment_terms_days": terms,
+                  "source_type": "synthetic"} for i, (name, lead_time, terms) in enumerate(SUPPLIERS)]
+    retailers = [{"retailer_id": f"RET-{i+1:03}", "retailer_name": name, "shop_type": shop_type,
+                  "area": LOCALITIES[i % len(LOCALITIES)],
                   "service_priority": ["normal", "normal", "high"][i % 3],
-                  "source_type": "synthetic", "verified_business": "false"} for i in range(20)]
+                  "source_type": "synthetic", "verified_business": "false"}
+                 for i, (name, shop_type) in enumerate(RETAILERS)]
     offers = []
     for s in suppliers:
         for p in products:
@@ -131,12 +163,23 @@ def generate(out: Path, seed: int) -> None:
         intent = INTENTS[i % len(INTENTS)]
         product, retailer, supplier = rng.choice(products), rng.choice(retailers), rng.choice(suppliers)
         template = rng.choice(TEMPLATES[intent])
-        text = template.format(product=product["product_name"], retailer=retailer["retailer_id"], supplier=supplier["supplier_id"])
+        text = template.format(
+            product=product["product_name"],
+            retailer=retailer["retailer_name"],
+            supplier=supplier["supplier_name"],
+        )
         evidence = next((word for word in ("late", "damaged", "short", "asking", "scheme", "delay", "not verified", "no quantity") if word in text.lower()), "")
+        is_supplier_update = intent == "supplier_delay"
+        entities = {
+            "product": product["product_name"],
+            "retailer_id": None if is_supplier_update else retailer["retailer_id"],
+            "retailer_name": None if is_supplier_update else retailer["retailer_name"],
+            "supplier_id": supplier["supplier_id"] if is_supplier_update else None,
+            "supplier_name": supplier["supplier_name"] if is_supplier_update else None,
+        }
         messages.append({"message_id": f"MSG-{i+1:05}", "source_type": "synthetic" if intent not in ("supplier_delay",) else "supplier_update",
                          "observed_at": f"2026-10-{(i % 28)+1:02}T10:00:00+05:30", "language": "English",
-                         "text": text, "intent": intent, "entities": json.dumps({"product": product["product_name"], "retailer_id": retailer["retailer_id"] if intent != "supplier_delay" else None,
-                                                                                     "supplier_id": supplier["supplier_id"] if intent == "supplier_delay" else None}),
+                         "text": text, "intent": intent, "entities": json.dumps(entities),
                          "urgency": "unclear" if i % 5 == 0 else "normal", "evidence_span": evidence,
                          "uncertainty": "Synthetic example; exact order/date/quantity may be unstated.", "review_label": "correct",
                          "consent_status": "synthetic", "source_type_label": "synthetic"})
@@ -162,7 +205,9 @@ def generate(out: Path, seed: int) -> None:
     ], 1):
         (docs / f"SYN-DOC-{i:03}.txt").write_text(f"{title}\nSource: synthetic demonstration policy\nEffective date: 2026-11-01\n\n{body}\n", encoding="utf-8")
     (out / "DATA_DICTIONARY.md").write_text(
-        "# Synthetic dataset dictionary\n\nGenerated by `scripts/generate_synthetic_data.py`; all entities and events are fictional. Reproducible with a fixed seed. Currency is exact decimal rupees with two decimal places; quantities use the explicit `unit`/`base_unit` field. Dates are ISO 8601; timestamps include +05:30. `messages.jsonl` contains 1,000 labelled synthetic examples; `events.jsonl` has corresponding evidence-linked event annotations. Keep both separate from any permissioned pilot data. `scenarios.csv/json` provide eight repeatable cases. Supplier offers are valid only for listed supplier-SKU rows. No value represents verified local prices or business activity.\n\nTables: products, suppliers, retailers, supplier_products, inventory, historical_order_lines, open_orders, supplier_deliveries, cash_ledger, scenarios and messages/events. Stable IDs connect related rows. Unknown source facts must remain unknown.\n",
+        "# Synthetic dataset dictionary\n\nGenerated by `scripts/generate_synthetic_data.py`; all entities and events are fictional. Reproducible with a fixed seed. Currency is exact decimal rupees with two decimal places; quantities use the explicit `unit`/`base_unit` field. Dates are ISO 8601; timestamps include +05:30. `messages.jsonl` contains 1,000 labelled synthetic examples; `events.jsonl` has corresponding evidence-linked event annotations. Keep both separate from any permissioned pilot data. `scenarios.csv/json` provide eight repeatable cases. Supplier offers are valid only for listed supplier-SKU rows. No value represents verified local prices or business activity.\n\n"
+        "Supplier and retailer rows carry fictional trade names (`supplier_name`, `retailer_name`, `shop_type`, locality `area`). Names are display labels only; `supplier_id` and `retailer_id` remain the internal join keys used by orders, deliveries, facts, plans and review records. Messages quote trade names the way a person would write them, while the `entities` annotation stores both the name and the matching ID.\n\n"
+        "Tables: products, suppliers, retailers, supplier_products, inventory, historical_order_lines, open_orders, supplier_deliveries, cash_ledger, scenarios and messages/events. Stable IDs connect related rows. Unknown source facts must remain unknown.\n",
         encoding="utf-8")
     print(f"Generated synthetic pack at {out} (seed={seed}, messages={len(messages)}, scenarios={len(scenarios)})")
 

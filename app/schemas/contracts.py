@@ -5,6 +5,12 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
+class SenderRef(BaseModel):
+    party_type: Literal["retailer", "supplier", "sales_rep", "unknown"] = "unknown"
+    party_id: str | None = None
+    channel: Literal["chat", "whatsapp", "api"] = "api"
+
+
 class MessageSubmission(BaseModel):
     message_id: str = Field(min_length=1)
     source_type: Literal["retailer_message", "sales_visit", "supplier_update", "synthetic"]
@@ -13,6 +19,34 @@ class MessageSubmission(BaseModel):
     language: str = "unknown"
     consent_status: Literal["synthetic", "authorized", "not_applicable"] = "synthetic"
     state_version: str = Field(min_length=1)
+    conversation_id: str | None = None
+    sender: SenderRef | None = None
+
+
+class IntentMatch(BaseModel):
+    intent: str
+    confidence: float = Field(ge=0, le=1)
+    evidence_span: str | None = None
+
+
+class InboundAck(BaseModel):
+    kind: Literal["receipt", "complete"]
+    status: Literal["accepted", "duplicate", "triaged", "rejected"] = "accepted"
+    text: str
+    language: str = "English"
+
+
+class InboundResult(BaseModel):
+    ack: InboundAck
+    completion_ack: InboundAck | None = None
+    event: dict | None = None
+    routed_action: str = "human_triage"
+    question: str | None = None
+    recommendation: dict | None = None
+    mode: str = "rules_mock"
+    rounds: int = 0
+    duplicate: bool = False
+    processing_error: str | None = None
 
 
 class EvidenceFact(BaseModel):
@@ -28,6 +62,8 @@ class BusinessEvent(BaseModel):
     event_id: str
     source_message_ids: list[str]
     event_type: str
+    intents: list[IntentMatch] = Field(default_factory=list)
+    taxonomy_version: str = "0.1"
     extracted_facts: list[EvidenceFact] = Field(default_factory=list)
     inferences: dict[str, str | bool | None] = Field(default_factory=dict)
     uncertainties: list[str] = Field(default_factory=list)
@@ -53,6 +89,7 @@ class BusinessState(BaseModel):
     inventory: list[dict] = Field(default_factory=list)
     open_orders: list[dict] = Field(default_factory=list)
     suppliers: list[dict] = Field(default_factory=list)
+    retailers: list[dict] = Field(default_factory=list)
     supplier_offers: list[dict] = Field(default_factory=list)
     cash_balance_rupees: Decimal
     minimum_cash_buffer_rupees: Decimal
@@ -67,6 +104,7 @@ class CashProjection(BaseModel):
 
 class SupplierOption(BaseModel):
     supplier_id: str
+    supplier_name: str = ""
     sku_id: str
     quantity_units: int = Field(gt=0)
     unit_cost_rupees: Decimal = Field(ge=0)

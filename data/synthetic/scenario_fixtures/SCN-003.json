@@ -4,7 +4,7 @@
   "message": {
     "message_id": "DEMO-SCN-003-001",
     "source_type": "supplier_update",
-    "text": "Supplier SUP-005 reports a two-day delay for Cooking oil 1 L pouch; revised date is not confirmed.",
+    "text": "Sri Venkateswara FMCG Supply reports a two-day delay for Cooking oil 1 L pouch; revised date is not confirmed.",
     "observed_at": "2026-11-01T09:00:00+05:30",
     "language": "English",
     "consent_status": "synthetic",
