@@ -2,6 +2,9 @@ import hashlib
 import logging
 from datetime import date
 from pathlib import Path
+from typing import TypedDict
+
+from langgraph.graph import END, START, StateGraph
 
 from app.agents.inventory import analyze_inventory
 from app.agents.orders import analyze_orders
@@ -24,6 +27,15 @@ from app.state import load_business_state
 from app.verification.checks import verify_plan
 
 logger = logging.getLogger(__name__)
+
+
+class PlanState(TypedDict, total=False):
+    submission: MessageSubmission
+    data_dir: Path | None
+    business_state: BusinessState
+    extraction: Extraction
+    event: BusinessEvent
+    result: dict
 
 
 def _stable_id(prefix: str, *parts: str) -> str:
@@ -269,15 +281,103 @@ def _event_only(message: MessageSubmission, event: BusinessEvent, extraction: Ex
 router.register("supplier_delay", _process_supplier_delay)
 
 
-def process_message(message: MessageSubmission, data_dir: Path | None = None) -> dict:
-    state = load_business_state(data_dir=data_dir, expected_version=message.state_version)
-    extraction = _extract(message, state)
-    event = _base_event(message, extraction)
+def _load_state(flow: PlanState) -> dict:
+    submission = flow["submission"]
+    return {
+        "business_state": load_business_state(
+            data_dir=flow.get("data_dir"), expected_version=submission.state_version
+        )
+    }
+
+
+def _extract_node(flow: PlanState) -> dict:
+    return {"extraction": _extract(flow["submission"], flow["business_state"])}
+
+
+def _build_event_node(flow: PlanState) -> dict:
+    return {"event": _base_event(flow["submission"], flow["extraction"])}
+
+
+def _plan_node(flow: PlanState) -> dict:
+    submission = flow["submission"]
+    extraction = flow["extraction"]
+    event = flow["event"]
     handler = router.resolve(extraction.primary_intent)
-    if handler is not None:
-        result = handler(message, event, extraction, state, data_dir)
-    else:
-        result = _event_only(message, event, extraction)
-    result["routed_action"] = router.routed_action(extraction.primary_intent)
+    return {
+        "result": handler(submission, event, extraction, flow["business_state"], flow.get("data_dir"))
+    }
+
+
+def _triage_node(flow: PlanState) -> dict:
+    return {"result": _event_only(flow["submission"], flow["event"], flow["extraction"])}
+
+
+def _after_event(flow: PlanState) -> str:
+    return "plan" if router.resolve(flow["extraction"].primary_intent) else "triage"
+
+
+def _after_plan(flow: PlanState) -> str:
+    result = flow.get("result") or {}
+    if result.get("selected_plan") and result.get("verification"):
+        return "review_gate"
+    return "finalize"
+
+
+def _review_gate(flow: PlanState) -> dict:
+    """A recommendation reaches a human as pending_review only when the independent check passes."""
+    result = dict(flow["result"])
+    verification = result.get("verification") or {}
+    if verification.get("valid"):
+        return {"result": result}
+    recommendation = dict(result.get("recommendation") or {})
+    recommendation["review_status"] = "needs_clarification"
+    warnings = list(recommendation.get("warnings") or [])
+    warnings.extend(item for item in verification.get("violations", []) if item not in warnings)
+    recommendation["warnings"] = warnings
+    result["recommendation"] = recommendation
+    trace = list(result.get("trace") or [])
+    if "verification_failed" not in trace:
+        trace.append("verification_failed")
+    result["trace"] = trace
+    logger.warning(
+        "verification_gate_blocked event_id=%s violations=%s",
+        (result.get("event") or {}).get("event_id"),
+        verification.get("violations", []),
+    )
+    return {"result": result}
+
+
+def _finalize(flow: PlanState) -> dict:
+    result = dict(flow["result"])
+    result["routed_action"] = router.routed_action(flow["extraction"].primary_intent)
     result["taxonomy_version"] = TAXONOMY_VERSION
-    return result
+    return {"result": result}
+
+
+def _build_plan_graph():
+    builder = StateGraph(PlanState)
+    builder.add_node("load_state", _load_state)
+    builder.add_node("extract", _extract_node)
+    builder.add_node("build_event", _build_event_node)
+    builder.add_node("plan", _plan_node)
+    builder.add_node("triage", _triage_node)
+    builder.add_node("review_gate", _review_gate)
+    builder.add_node("finalize", _finalize)
+
+    builder.add_edge(START, "load_state")
+    builder.add_edge("load_state", "extract")
+    builder.add_edge("extract", "build_event")
+    builder.add_conditional_edges("build_event", _after_event, {"plan": "plan", "triage": "triage"})
+    builder.add_conditional_edges("plan", _after_plan, {"review_gate": "review_gate", "finalize": "finalize"})
+    builder.add_edge("triage", "finalize")
+    builder.add_edge("review_gate", "finalize")
+    builder.add_edge("finalize", END)
+    return builder.compile()
+
+
+plan_graph = _build_plan_graph()
+
+
+def process_message(message: MessageSubmission, data_dir: Path | None = None) -> dict:
+    output = plan_graph.invoke({"submission": message, "data_dir": data_dir})
+    return output["result"]

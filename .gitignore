@@ -10,3 +10,4 @@ data/pilot_deidentified/*
 data/evaluation_runs/
 *.log
 desktop.ini
+~$*

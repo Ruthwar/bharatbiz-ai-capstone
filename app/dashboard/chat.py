@@ -1,9 +1,17 @@
 import json
 import os
+import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 import streamlit as st
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.dashboard.review_view import render_review_context  # noqa: E402
 
 API_URL = os.getenv("BHARATBIZ_API_URL", "http://127.0.0.1:8000")
 
@@ -153,6 +161,7 @@ with review_tab:
         with st.container(border=True):
             st.write(f"**{item['event_type']}** · `{item['routed_action']}` · {item['mode']}")
             st.write(item["summary"])
+            render_review_context(item.get("why"))
             approve, reject, _ = st.columns([1, 1, 4])
             if approve.button("Approve", key=f"approve-{index}"):
                 post(f"/api/v1/review/{item['event_id']}", {"decision": "approve", "reviewer": "demo-owner"})

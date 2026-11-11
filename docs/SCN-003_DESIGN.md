@@ -286,6 +286,7 @@ For the selected supplier plan:
 - With SUP-002 arriving 2026-11-03, the 1 + 27 = 28 litres due 2026-11-02 are late.
 - The 18 litres due 2026-11-04 are on time.
 - Total fulfilled: 102. Late: 28. Unmet: 0.
+- SUP-003 and SUP-005 arrive 2026-11-04. The 28 litres due 2026-11-02 stay late and the 18 litres due 2026-11-04 stay on time, so late is 28 for every supplier plan. Only the arrival date changes.
 
 Candidate IDs are `stock-only`, `supplier-SUP-002`, `supplier-SUP-003`, and `supplier-SUP-005`.
 
@@ -305,7 +306,7 @@ Consequences:
 4. Cost only breaks ties among otherwise equivalent plans.
 5. Candidate ID makes the final tie-break deterministic.
 
-The stock-only plan loses on unmet units: 46 unmet versus 0. SUP-002 beats SUP-003 and SUP-005 because it arrives on 2026-11-03 and limits lateness to 28 litres, while the others arrive on 2026-11-04 and make all 46 supplier-allocated litres late. SUP-002 is not the cheapest option; it is selected because lateness is prioritized above cost.
+The stock-only plan loses on unmet units: 46 unmet versus 0. All three supplier plans cover demand and leave the same 28 litres late, because the only orders receiving supplier stock are due 2026-11-02 and 2026-11-04. SUP-002 therefore wins on the third key, arrival: it lands on 2026-11-03 instead of 2026-11-04. That earlier arrival costs ₹168.36 more than SUP-003 and ₹533.60 more than SUP-005. Under this policy one day of earlier arrival outranks those savings; Section 13.3 explains how to make that trade-off configurable.
 
 This is a policy choice, not an objective truth. Section 13.3 explains where to make the policy configurable or replace it with a formal optimizer.
 
