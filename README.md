@@ -72,7 +72,7 @@ Model extraction is optional. With `LLM_PROVIDER=none` (the default) the determi
 - `app/agents/` specialist analysis modules
 - `app/extraction/` extraction interface: rules and LLM adapters plus pre-plan validation gates
 - `app/channels/` channel adapters (demo chat; WhatsApp would normalise into the same contract)
-- `app/orchestration/` taxonomy, slot specs, intent router, inbound flow and SCN-003 vertical slice
+- `app/orchestration/` LangGraph inbound graph (dedup, intake, slot gate, review queue), decision graph (understand, plan, verify, finalize), taxonomy, slot specs, intent router and the SCN-003 vertical slice
 - `app/optimization/` deterministic allocation and candidate-plan baseline
 - `app/verification/` independent plan checks
 - `app/store/` in-memory inbound ledger for dedup and the human review queue

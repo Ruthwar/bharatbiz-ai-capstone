@@ -7,6 +7,7 @@ from app.extraction.base import Extraction
 from app.extraction.rules import resolve_product
 from app.extraction.validate import validate_extraction
 from app.main import app
+from app.orchestration import workflow
 from app.orchestration.acks import ACK_TEXTS
 from app.orchestration.router import registered_intents
 from app.schemas.contracts import EvidenceFact, IntentMatch, MessageSubmission
@@ -50,6 +51,30 @@ def test_supplier_delay_is_acknowledged_and_planned():
     assert result["event"]["event_type"] == "supplier_delay"
     assert result["recommendation"]["review_status"] == "pending_review"
     assert len(ledger.pending_reviews()) == 1
+
+
+def test_review_item_explains_the_trade_off():
+    post(SCN003_TEXT, sender_type="supplier", sender_id="SUP-005")
+    why = ledger.pending_reviews()[0]["why"]
+
+    assert why["requested_units"] == 102
+    assert why["usable_units"] == 56
+    assert why["required_units"] == 46
+    assert why["verification_valid"] is True
+
+    alternatives = {row["label"]: row for row in why["alternatives"]}
+    assert alternatives["Stock only"]["unmet_units"] == 46
+    selected = alternatives["Balaji Wholesale Distributors (SUP-002)"]
+    assert selected["selected"] is True
+    assert selected["late_units"] == 28
+    assert alternatives["Krishna Rice Mills (SUP-003)"]["late_units"] == 28
+    assert selected["arrival_date"] < alternatives["Krishna Rice Mills (SUP-003)"]["arrival_date"]
+
+
+def test_triage_item_has_no_plan_explanation():
+    post("Please look into it when you get time.", sender_type="retailer", sender_id="RET-004")
+
+    assert ledger.pending_reviews()[0]["why"] is None
 
 
 def test_missing_slot_triggers_one_question_then_completes():
@@ -151,3 +176,39 @@ def test_ambiguous_product_never_gets_a_sku():
 
     assert resolve_product(state, "Rice") is None
     assert resolve_product(state, "Cooking oil 1 L pouch")["sku_id"] == "SKU-003"
+
+
+def test_the_decision_pipeline_is_graph_backed():
+    from app.orchestration.inbound import inbound_graph
+    from app.orchestration.workflow import plan_graph
+
+    assert {"load_state", "extract", "build_event", "plan", "triage", "review_gate", "finalize"} <= set(
+        plan_graph.get_graph().nodes
+    )
+    assert {"dedup", "intake", "plan", "slot_gate", "ask_follow_up", "close_and_queue"} <= set(
+        inbound_graph.get_graph().nodes
+    )
+
+
+def test_failed_verification_never_reaches_human_review(monkeypatch):
+    class InvalidVerification:
+        valid = False
+        violations = ["stub: allocation exceeds available stock"]
+
+        def model_dump(self, mode: str = "json") -> dict:
+            return {"valid": self.valid, "violations": list(self.violations)}
+
+    monkeypatch.setattr(workflow, "verify_plan", lambda *args, **kwargs: InvalidVerification())
+    message = MessageSubmission(
+        message_id="m-gate",
+        source_type="supplier_update",
+        text=SCN003_TEXT,
+        observed_at="2026-11-01T09:00:00+05:30",
+        state_version=STATE_VERSION,
+    )
+
+    result = workflow.process_message(message)
+
+    assert result["recommendation"]["review_status"] == "needs_clarification"
+    assert "verification_failed" in result["trace"]
+    assert "stub: allocation exceeds available stock" in result["recommendation"]["warnings"]
