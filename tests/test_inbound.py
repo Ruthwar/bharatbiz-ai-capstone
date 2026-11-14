@@ -27,7 +27,14 @@ def clear_ledger():
 
 
 def post(text: str, **overrides) -> dict:
-    payload = {"text": text, "conversation_id": "c1", "state_version": STATE_VERSION, **overrides}
+    payload = {
+        "text": text,
+        "conversation_id": "c1",
+        "sender_type": "supplier",
+        "sender_id": "SUP-005",
+        "state_version": STATE_VERSION,
+        **overrides,
+    }
     response = client.post("/api/v1/inbound", json=payload)
     assert response.status_code == 200, response.text
     return response.json()
@@ -99,6 +106,55 @@ def test_missing_slot_triggers_one_question_then_completes():
     assert second["completion_ack"]["kind"] == "complete"
     assert second["event"]["inferences"]["catalogue_sku_id"] == "SKU-003"
     assert second["event"]["source_message_ids"]
+
+
+def test_two_missing_slots_are_asked_in_separate_turns():
+    first = post(
+        "SUP-005 reports that delivery is late.",
+        sender_type="supplier",
+        sender_id="SUP-005",
+        conversation_id="c-two",
+    )
+
+    assert first["routed_action"] == "slot_question"
+    assert first["question"] == "Which product and pack is affected?"
+
+    second = post(
+        "Cooking oil 1 L pouch",
+        sender_type="supplier",
+        sender_id="SUP-005",
+        conversation_id="c-two",
+    )
+
+    assert second["routed_action"] == "slot_question"
+    assert second["question"] == "How many days is the delay?"
+
+    third = post(
+        "2-day delay",
+        sender_type="supplier",
+        sender_id="SUP-005",
+        conversation_id="c-two",
+    )
+
+    assert third["routed_action"] == "supplier_delay_planning"
+    assert third["recommendation"]["review_status"] == "pending_review"
+
+
+def test_retailer_cannot_report_a_supplier_delay():
+    result = post(SCN003_TEXT, sender_type="retailer", sender_id="RET-004")
+
+    assert result["routed_action"] == "human_triage"
+    assert result["recommendation"] is None
+    assert any("supplier account" in note for note in result["event"]["uncertainties"])
+    item = ledger.pending_reviews()[0]
+    assert item["why"] is None
+
+
+def test_reported_supplier_must_match_the_sending_account():
+    result = post(SCN003_TEXT, sender_type="supplier", sender_id="SUP-002")
+
+    assert result["routed_action"] == "human_triage"
+    assert any("does not match" in note for note in result["event"]["uncertainties"])
 
 
 def test_unknown_message_keeps_facts_and_goes_to_triage():
@@ -182,9 +238,16 @@ def test_the_decision_pipeline_is_graph_backed():
     from app.orchestration.inbound import inbound_graph
     from app.orchestration.workflow import plan_graph
 
-    assert {"load_state", "extract", "build_event", "plan", "triage", "review_gate", "finalize"} <= set(
-        plan_graph.get_graph().nodes
-    )
+    assert {
+        "load_state",
+        "extract",
+        "build_event",
+        "authorize",
+        "plan",
+        "triage",
+        "review_gate",
+        "finalize",
+    } <= set(plan_graph.get_graph().nodes)
     assert {"dedup", "intake", "plan", "slot_gate", "ask_follow_up", "close_and_queue"} <= set(
         inbound_graph.get_graph().nodes
     )

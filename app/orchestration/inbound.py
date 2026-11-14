@@ -90,7 +90,8 @@ def _intake(flow: InboundState) -> dict:
     message = flow["original"]
     conversation_id = message.conversation_id or message.message_id
     intake = flow["ledger"].get_intake(conversation_id)
-    rounds = (intake.rounds + 1) if intake else 0
+    # rounds counts questions already asked, so the cap compares questions asked with max_rounds.
+    rounds = intake.rounds if intake else 0
     submission = message
     if intake:
         submission = message.model_copy(update={"text": "\n".join(intake.texts + [message.text])})
@@ -202,7 +203,7 @@ def _record_processing_error(message: MessageSubmission, exc: Exception, ledger:
     reason = type(exc).__name__
     conversation_id = message.conversation_id or message.message_id
     intake = ledger.get_intake(conversation_id)
-    rounds = (intake.rounds + 1) if intake else 0
+    rounds = intake.rounds if intake else 0
     payload = InboundResult(
         ack=_receipt(message, "triaged"),
         routed_action="human_triage",

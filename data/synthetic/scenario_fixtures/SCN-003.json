@@ -8,7 +8,12 @@
     "observed_at": "2026-11-01T09:00:00+05:30",
     "language": "English",
     "consent_status": "synthetic",
-    "state_version": "synthetic-v2-seed-20261105"
+    "state_version": "synthetic-v2-seed-20261105",
+    "sender": {
+      "party_type": "supplier",
+      "party_id": "SUP-005",
+      "channel": "api"
+    }
   },
   "assumptions": {
     "sku_id": "SKU-003",

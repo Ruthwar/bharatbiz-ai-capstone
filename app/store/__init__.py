@@ -1,5 +1,5 @@
-"""Placeholder for the demo ledger. Persistence is migration step 6 in SCN-003_DESIGN.md."""
+"""Ledger storage. The API uses the SQLite ledger; tests use it on an in-memory database."""
 
-from app.store.ledger import InboundLedger, PendingIntake, ledger
+from app.store.ledger import InboundLedger, PendingIntake, SqliteLedger, ledger
 
-__all__ = ["InboundLedger", "PendingIntake", "ledger"]
+__all__ = ["InboundLedger", "PendingIntake", "SqliteLedger", "ledger"]
