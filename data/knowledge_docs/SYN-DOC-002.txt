@@ -1,5 +1,0 @@
-Synthetic retailer complaint procedure
-Source: synthetic demonstration policy
-Effective date: 2026-11-01
-
-SIMULATION ONLY. Record original complaint, source, timestamp and evidence. Link an order only with a reliable reference. Keep follow-up pending until a human confirms the outcome.

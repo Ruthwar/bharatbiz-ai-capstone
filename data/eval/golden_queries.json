@@ -1,0 +1,217 @@
+{
+  "version": "1.0",
+  "corpus_as_of": "2026-11-13",
+  "notes": "Each query names the primary document a reviewer should be shown. 'acceptable' lists other documents that answer the question correctly; they count for recall@k but not for primary@1. Queries were written before running the evaluation and were not tuned to individual rankings, except that documents which genuinely answer the same question were recorded as acceptable.",
+  "queries": [
+    {
+      "id": "GQ-01",
+      "query": "Can we promise the retailer a revised delivery date before the supplier confirms it?",
+      "expected": "POL-DLY-001",
+      "acceptable": ["SOP-SHT-003", "POL-COM-006"],
+      "why": "The no-promise rule is R1 of the delay policy; the SOP and comms policy restate it."
+    },
+    {
+      "id": "GQ-02",
+      "query": "How is a revised date that the supplier has not confirmed recorded?",
+      "expected": "POL-DLY-001",
+      "acceptable": ["SOP-INT-001", "TRM-SUP-005", "TRM-SUP-002", "TRM-SUP-003"],
+      "why": "Recorded as unknown, never inferred from the delay length."
+    },
+    {
+      "id": "GQ-03",
+      "query": "Two plans cover the same units and have the same late units; which one wins?",
+      "expected": "POL-DLY-001",
+      "acceptable": ["SOP-REV-002"],
+      "why": "Tie-break is earliest arrival, then cost."
+    },
+    {
+      "id": "GQ-04",
+      "query": "Is a plan removed from the candidates when ending cash falls below the minimum buffer?",
+      "expected": "POL-CSH-002",
+      "acceptable": ["POL-DLY-001"],
+      "why": "Affordability excludes a candidate before ranking."
+    },
+    {
+      "id": "GQ-05",
+      "query": "Do supplier payment terms create credit in the cash projection?",
+      "expected": "POL-CSH-002",
+      "acceptable": ["TRM-SUP-003"],
+      "why": "Cost is an immediate outflow regardless of payment terms."
+    },
+    {
+      "id": "GQ-06",
+      "query": "Can a 5 litre tin replace a 1 litre pouch without the retailer's consent?",
+      "expected": "POL-SUB-003",
+      "acceptable": ["TRM-SUP-002"],
+      "why": "Pack-size change is substitution and needs consent."
+    },
+    {
+      "id": "GQ-07",
+      "query": "May the planner convert five pouches into one tin when buying?",
+      "expected": "POL-SUB-003",
+      "acceptable": [],
+      "why": "Units are never silently converted."
+    },
+    {
+      "id": "GQ-08",
+      "query": "Which changed inputs void an approval?",
+      "expected": "POL-PRC-005",
+      "acceptable": ["SOP-STV-004", "SOP-REV-002"],
+      "why": "Rate, quantity, arrival date and state version are all binding."
+    },
+    {
+      "id": "GQ-09",
+      "query": "A supplier re-quotes during a delay; does the earlier approval survive?",
+      "expected": "POL-PRC-005",
+      "acceptable": ["CASE-2026-021"],
+      "why": "No automatic re-pricing; a new plan and a new review item."
+    },
+    {
+      "id": "GQ-10",
+      "query": "May an acknowledgement contain a delivery date or a price?",
+      "expected": "POL-COM-006",
+      "acceptable": [],
+      "why": "Template acknowledgements assert nothing."
+    },
+    {
+      "id": "GQ-11",
+      "query": "A retailer reports a supplier's dispatch delay; is it processed as a delay?",
+      "expected": "SOP-INT-001",
+      "acceptable": ["CASE-2026-005", "POL-COM-006"],
+      "why": "Identity gate: wrong party cannot report the delay."
+    },
+    {
+      "id": "GQ-12",
+      "query": "What is the maximum number of follow-up questions before human triage?",
+      "expected": "SOP-INT-001",
+      "acceptable": [],
+      "why": "Two rounds, one question per turn."
+    },
+    {
+      "id": "GQ-13",
+      "query": "Can a retailer be asked for the supplier's dispatch date?",
+      "expected": "SOP-INT-001",
+      "acceptable": [],
+      "why": "Only the party that can know a fact is asked for it."
+    },
+    {
+      "id": "GQ-14",
+      "query": "A reply introduces a second intent; is it absorbed into the first message?",
+      "expected": "SOP-INT-001",
+      "acceptable": [],
+      "why": "A new intent forks a new event."
+    },
+    {
+      "id": "GQ-15",
+      "query": "What happens when the message state version does not match the loaded state?",
+      "expected": "SOP-STV-004",
+      "acceptable": ["SOP-INT-001"],
+      "why": "Receipt, no plan, human triage with a processing error."
+    },
+    {
+      "id": "GQ-16",
+      "query": "Supplier offers 60 percent now and 40 percent next week; how is it planned?",
+      "expected": "SOP-SHT-003",
+      "acceptable": ["CASE-2026-009", "TRM-SUP-005"],
+      "why": "Partial dispatch is triaged and split manually."
+    },
+    {
+      "id": "GQ-17",
+      "query": "A percentage of an order quantity that was never stated; is that a quantity?",
+      "expected": "SOP-SHT-003",
+      "acceptable": ["CASE-2026-009"],
+      "why": "A percentage is not a quantity; confirm units."
+    },
+    {
+      "id": "GQ-18",
+      "query": "What is the minimum order quantity for cooking oil at Balaji Wholesale Distributors?",
+      "expected": "TRM-SUP-002",
+      "acceptable": [],
+      "why": "Per-line MOQ of 10 for both oil packs."
+    },
+    {
+      "id": "GQ-19",
+      "query": "How long is Krishna Rice Mills' quote valid and how much notice do they give for a price revision?",
+      "expected": "TRM-SUP-003",
+      "acceptable": [],
+      "why": "Seven-day validity, three days' notice on open orders."
+    },
+    {
+      "id": "GQ-20",
+      "query": "How soon must Sri Venkateswara FMCG Supply notify a delay?",
+      "expected": "TRM-SUP-005",
+      "acceptable": [],
+      "why": "Immediately on becoming aware, before dispatch."
+    },
+    {
+      "id": "GQ-21",
+      "query": "Must the FSSAI licence number and logo appear on a food pack?",
+      "expected": "REG-FSSAI-LAB-2020",
+      "acceptable": [],
+      "why": "Regulation 5(7) requires both."
+    },
+    {
+      "id": "GQ-22",
+      "query": "What must the ingredient list say when edible vegetable oil is used?",
+      "expected": "REG-FSSAI-LAB-2020",
+      "acceptable": [],
+      "why": "Name the specific oil, not the class."
+    },
+    {
+      "id": "GQ-23",
+      "query": "What declarations does Rule 6 require on every package?",
+      "expected": "REG-LMPC-2011-R6",
+      "acceptable": [],
+      "why": "Name and address, common name, net quantity, month and year, MRP, consumer care."
+    },
+    {
+      "id": "GQ-24",
+      "query": "Can a sticker show a higher maximum retail price than the printed MRP?",
+      "expected": "REG-LMPC-2011-R6",
+      "acceptable": ["POL-PRC-005"],
+      "why": "Rule 6(3): only a reduced MRP may be stickered."
+    },
+    {
+      "id": "GQ-25",
+      "query": "What GST rate applies to toothpaste and shampoo from 22 September 2025?",
+      "expected": "REG-GST-2025-09",
+      "acceptable": [],
+      "why": "Both moved to the 5 percent merit rate."
+    },
+    {
+      "id": "GQ-26",
+      "query": "Is laundry detergent taxed at 5 or 18 percent GST?",
+      "expected": "REG-GST-2025-09",
+      "acceptable": ["POL-SUB-003"],
+      "why": "Detergent stays at the 18 percent standard rate."
+    },
+    {
+      "id": "GQ-27",
+      "query": "Why can't the beverage SKU be assigned one GST rate?",
+      "expected": "REG-GST-2025-09",
+      "acceptable": [],
+      "why": "2202 splits between 5 and 40 percent depending on the drink."
+    },
+    {
+      "id": "GQ-28",
+      "query": "Why did the cooking oil delay plan accept 28 late litres?",
+      "expected": "CASE-2026-014",
+      "acceptable": ["POL-DLY-001"],
+      "why": "Every plan delivered the same late units; the tie broke on arrival."
+    },
+    {
+      "id": "GQ-29",
+      "query": "What happened when a retailer reported a supplier delay that did not exist?",
+      "expected": "CASE-2026-005",
+      "acceptable": ["SOP-INT-001"],
+      "why": "Identity gate prevented a wrong plan."
+    },
+    {
+      "id": "GQ-30",
+      "query": "How are evidence spans and their offsets verified?",
+      "expected": "POL-DAT-004",
+      "acceptable": ["SOP-INT-001", "SOP-REV-002"],
+      "why": "Verbatim span equals quoted text or the item is rejected."
+    }
+  ]
+}
