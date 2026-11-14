@@ -1,9 +1,12 @@
-"""Shared rendering for the human review card. One view, so the queue and dashboard cannot drift."""
+"""Shared rendering for the human review workspace. Pure presentation, no decision logic."""
 
 from datetime import date
 from decimal import Decimal
+from html import escape
 
 import streamlit as st
+
+from app.dashboard.theme import badge, format_rupees, quote_html, section_title
 
 RANKING_RULE = (
     "Ranking: fewest unmet units, then fewest late units, then earliest arrival, then lowest cost. "
@@ -12,7 +15,7 @@ RANKING_RULE = (
 
 
 def _money(value) -> str:
-    return f"₹{Decimal(str(value)):,.2f}"
+    return format_rupees(value)
 
 
 def _trade_offs(context: dict) -> list[str]:
@@ -53,24 +56,21 @@ def _trade_offs(context: dict) -> list[str]:
     return [text for _, text in sorted(lines)]
 
 
-def render_review_context(context: dict | None) -> None:
-    if not context:
-        return
-
+def render_decision(context: dict) -> None:
     unit = context["unit"]
     arrival = context.get("selected_arrival_date")
+    section_title("Plan comparison", "Every feasible candidate remains visible; excluded plans never enter ranking.")
     st.write(
-        f"**Why this plan:** {context['usable_units']} {unit} usable covers "
+        f"{context['usable_units']} {unit} of usable stock covers "
         f"{min(context['usable_units'], context['requested_units'])} of {context['requested_units']} {unit} "
-        f"requested across {context['order_count']} orders; buying {context['required_units']} {unit} leaves "
+        f"requested across {context['order_count']} orders. Buying {context['required_units']} {unit} leaves "
         f"{context['selected_unmet_units']} unmet and {context['selected_late_units']} late"
-        + (f", arriving {arrival}." if arrival else ".")
+        + (f", with arrival on {arrival}." if arrival else ".")
     )
-
     st.dataframe(
         [
             {
-                "Plan": row["label"] + (" (selected)" if row["selected"] else ""),
+                "Plan": row["label"] + (" · selected" if row["selected"] else ""),
                 "Cost": _money(row["total_cost_rupees"]),
                 "Arrival": row["arrival_date"] or "—",
                 "Late": row["late_units"],
@@ -80,62 +80,114 @@ def render_review_context(context: dict | None) -> None:
             }
             for row in context["alternatives"]
         ],
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
     st.caption(RANKING_RULE)
-
-    for line in _trade_offs(context):
-        st.write(f"- {line}")
-
+    trade_offs = _trade_offs(context)
+    if trade_offs:
+        section_title("What the extra money buys")
+        for line in trade_offs:
+            st.write(f"- {line}")
     if context["verification_valid"]:
-        st.success("Independently verified: allocations, cost, cash and totals — 0 violations.")
+        st.success("Independent verification passed: allocations, cost, cash and totals · 0 violations.")
     else:
         st.error("Verification failed: " + "; ".join(context["verification_violations"]))
 
-    with st.expander("Evidence from the message"):
-        st.caption(context["source_text"])
-        if context["evidence"]:
-            st.dataframe(
-                [
-                    {
-                        "Field": fact["field"],
-                        "Value": fact["value"],
-                        "Exact evidence": fact["evidence_span"],
-                        "Offsets": (
-                            f"{fact['span_start']}–{fact['span_end']}"
-                            if fact.get("span_start") is not None
-                            else ""
-                        ),
-                    }
-                    for fact in context["evidence"]
-                ],
-                use_container_width=True,
-                hide_index=True,
-            )
 
-    with st.expander("Assumptions and unknowns"):
-        for assumption in context["assumptions"]:
-            st.write(f"- {assumption}")
-        for unknown in context["unknowns"]:
-            st.write(f"- **Unknown:** {unknown}")
-        for warning in context["warnings"]:
-            st.warning(warning)
-
-    with st.expander("Per-order allocation"):
+def render_evidence(context: dict) -> None:
+    section_title("Source message", "Facts remain linked to exact spans in the original text.")
+    st.markdown(
+        f'<div class="bb-quote">{quote_html(context["source_text"])}</div>',
+        unsafe_allow_html=True,
+    )
+    if context["evidence"]:
         st.dataframe(
             [
                 {
-                    "Order": row["order_id"],
-                    "Due": row["requested_delivery_date"],
-                    "Requested": row["requested_units"],
-                    "From stock": row["stock_fulfilled_units"],
-                    "From supplier": row["supplier_fulfilled_units"],
-                    "Late": row["late_units"],
-                    "Unmet": row["unmet_units"],
+                    "Field": fact["field"],
+                    "Value": fact["value"],
+                    "Exact evidence": fact["evidence_span"],
+                    "Offsets": (
+                        f"{fact['span_start']}–{fact['span_end']}"
+                        if fact.get("span_start") is not None
+                        else ""
+                    ),
                 }
-                for row in context["allocations"]
+                for fact in context["evidence"]
             ],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
+    left, right = st.columns(2)
+    with left:
+        section_title("Assumptions")
+        for assumption in context["assumptions"]:
+            st.write(f"- {assumption}")
+        if not context["assumptions"]:
+            st.caption("No planning assumptions recorded.")
+    with right:
+        section_title("Unknowns")
+        for unknown in context["unknowns"]:
+            st.write(f"- {unknown}")
+        if not context["unknowns"]:
+            st.caption("No unresolved facts recorded.")
+    for warning in context["warnings"]:
+        st.warning(warning)
+
+
+def render_policies(context: dict) -> None:
+    section_title(
+        "Policy and precedent",
+        "Retrieved text explains the recommendation. It never supplies quantities, prices or dates to the planner.",
+    )
+    references = context.get("references") or []
+    if context.get("references_error"):
+        st.warning(context["references_error"])
+    if not references:
+        st.caption("No policy section matched this decision.")
+    for reference in references:
+        with st.container(border=True):
+            st.markdown(
+                f"{badge(reference['document_id'])} &nbsp; **{escape(reference['title'])}**",
+                unsafe_allow_html=True,
+            )
+            section = reference.get("section") or "Document overview"
+            st.caption(f"{section} · effective {reference['effective_from']}")
+            st.markdown(
+                f'<div class="bb-quote">{quote_html(reference["quote"])}</div>',
+                unsafe_allow_html=True,
+            )
+            if reference.get("source_url"):
+                st.caption(f"Source: {reference['source_url']} · {reference['licence']}")
+            else:
+                st.caption(reference["licence"])
+
+
+def render_allocations(context: dict) -> None:
+    section_title("Per-order allocation", "Stock and supplier quantities reconcile to the plan totals.")
+    st.dataframe(
+        [
+            {
+                "Order": row["order_id"],
+                "Due": row["requested_delivery_date"],
+                "Requested": row["requested_units"],
+                "From stock": row["stock_fulfilled_units"],
+                "From supplier": row["supplier_fulfilled_units"],
+                "Late": row["late_units"],
+                "Unmet": row["unmet_units"],
+            }
+            for row in context["allocations"]
+        ],
+        width="stretch",
+        hide_index=True,
+    )
+
+
+def render_review_context(context: dict | None) -> None:
+    if not context:
+        return
+    render_decision(context)
+    render_evidence(context)
+    render_policies(context)
+    render_allocations(context)
