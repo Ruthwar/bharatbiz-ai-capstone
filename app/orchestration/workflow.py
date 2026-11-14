@@ -35,7 +35,14 @@ class PlanState(TypedDict, total=False):
     business_state: BusinessState
     extraction: Extraction
     event: BusinessEvent
+    authorized: bool
+    auth_reason: str
     result: dict
+
+
+# Which channel identity may report which intent. A party relaying a message is not enough.
+ALLOWED_SENDERS: dict[str, tuple[str, ...]] = {"supplier_delay": ("supplier",)}
+REPORTED_PARTY_FACT: dict[str, str] = {"supplier_delay": "supplier_id"}
 
 
 def _stable_id(prefix: str, *parts: str) -> str:
@@ -298,6 +305,41 @@ def _build_event_node(flow: PlanState) -> dict:
     return {"event": _base_event(flow["submission"], flow["extraction"])}
 
 
+def _authorize(flow: PlanState) -> dict:
+    """Planning needs the right sender, not just the right words. Anything else is triaged."""
+    submission = flow["submission"]
+    extraction = flow["extraction"]
+    event = flow["event"]
+    intent = extraction.primary_intent
+    allowed = ALLOWED_SENDERS.get(intent)
+    sender = submission.sender
+    if allowed is None or sender is None:
+        return {"authorized": True}
+
+    reason = None
+    if sender.party_type not in allowed:
+        reason = (
+            f"{intent.replace('_', ' ')} may only be reported by a {' or '.join(allowed)} account; "
+            f"this message came from a {sender.party_type} account."
+        )
+    elif not sender.party_id:
+        reason = "Sending account is not linked to a trade party; the report cannot be authorised."
+    else:
+        field = REPORTED_PARTY_FACT.get(intent)
+        reported = extraction.fact(field) if field else None
+        if reported and reported.value.strip().upper() != sender.party_id.strip().upper():
+            reason = (
+                f"Reported party {reported.value} does not match the sending account {sender.party_id}."
+            )
+
+    if reason is None:
+        return {"authorized": True}
+
+    event.uncertainties.append(reason)
+    logger.warning("authorization_failed intent=%s reason=%s", intent, reason)
+    return {"authorized": False, "auth_reason": reason}
+
+
 def _plan_node(flow: PlanState) -> dict:
     submission = flow["submission"]
     extraction = flow["extraction"]
@@ -309,11 +351,16 @@ def _plan_node(flow: PlanState) -> dict:
 
 
 def _triage_node(flow: PlanState) -> dict:
-    return {"result": _event_only(flow["submission"], flow["event"], flow["extraction"])}
+    result = _event_only(flow["submission"], flow["event"], flow["extraction"])
+    if flow.get("authorized") is False:
+        result["trace"].append("authorization_failed")
+    return {"result": result}
 
 
 def _after_event(flow: PlanState) -> str:
-    return "plan" if router.resolve(flow["extraction"].primary_intent) else "triage"
+    if not router.resolve(flow["extraction"].primary_intent):
+        return "triage"
+    return "plan" if flow.get("authorized", True) else "triage"
 
 
 def _after_plan(flow: PlanState) -> str:
@@ -349,7 +396,10 @@ def _review_gate(flow: PlanState) -> dict:
 
 def _finalize(flow: PlanState) -> dict:
     result = dict(flow["result"])
-    result["routed_action"] = router.routed_action(flow["extraction"].primary_intent)
+    if flow.get("authorized") is False:
+        result["routed_action"] = "human_triage"
+    else:
+        result["routed_action"] = router.routed_action(flow["extraction"].primary_intent)
     result["taxonomy_version"] = TAXONOMY_VERSION
     return {"result": result}
 
@@ -359,6 +409,7 @@ def _build_plan_graph():
     builder.add_node("load_state", _load_state)
     builder.add_node("extract", _extract_node)
     builder.add_node("build_event", _build_event_node)
+    builder.add_node("authorize", _authorize)
     builder.add_node("plan", _plan_node)
     builder.add_node("triage", _triage_node)
     builder.add_node("review_gate", _review_gate)
@@ -367,7 +418,8 @@ def _build_plan_graph():
     builder.add_edge(START, "load_state")
     builder.add_edge("load_state", "extract")
     builder.add_edge("extract", "build_event")
-    builder.add_conditional_edges("build_event", _after_event, {"plan": "plan", "triage": "triage"})
+    builder.add_edge("build_event", "authorize")
+    builder.add_conditional_edges("authorize", _after_event, {"plan": "plan", "triage": "triage"})
     builder.add_conditional_edges("plan", _after_plan, {"review_gate": "review_gate", "finalize": "finalize"})
     builder.add_edge("triage", "finalize")
     builder.add_edge("review_gate", "finalize")

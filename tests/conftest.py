@@ -2,6 +2,9 @@ import json
 import os
 
 os.environ["LLM_PROVIDER"] = "none"
+# Tests must never touch the demo database on disk.
+os.environ["BHARATBIZ_LEDGER_DB"] = ":memory:"
+os.environ["BHARATBIZ_RAG_DB"] = ":memory:"
 
 from pathlib import Path
 

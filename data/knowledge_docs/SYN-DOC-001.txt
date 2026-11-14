@@ -1,5 +1,0 @@
-Synthetic delay handling guide
-Source: synthetic demonstration policy
-Effective date: 2026-11-01
-
-SIMULATION ONLY. If supplier arrival is delayed, verify affected orders and stock. Do not promise a date not confirmed by the supplier. A manager reviews proposed alternatives.

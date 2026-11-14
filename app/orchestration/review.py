@@ -1,5 +1,49 @@
 """Reviewer-facing explanation of a planned recommendation. Pure data, no rendering."""
 
+from datetime import date
+
+from app.rag.retrieval import retrieve
+
+_REFERENCE_QUERY = {
+    "supplier_delay": (
+        "supplier delay revised confirmed date late units accepted headroom buffer excluded case"
+    ),
+}
+_DEFAULT_REFERENCE_QUERY = "human review triage evidence policy procedure"
+
+
+def _policy_references(result: dict, event: dict) -> tuple[list[dict], str | None]:
+    """Retrieve the rules behind the plan. Citations explain the decision; they never feed the arithmetic."""
+    query = _REFERENCE_QUERY.get(event.get("event_type"), _DEFAULT_REFERENCE_QUERY)
+    facts = " ".join(str(fact.get("value", "")) for fact in event.get("extracted_facts") or [])
+    observed = (result.get("message") or {}).get("observed_at")
+    supplier_id = next(
+        (fact.get("value") for fact in event.get("extracted_facts") or [] if fact.get("field") == "supplier_id"),
+        None,
+    )
+    try:
+        hits = retrieve(
+            f"{query} {facts}".strip(),
+            top_k=3,
+            supplier_id=supplier_id,
+            as_of=date.fromisoformat(observed[:10]) if observed else None,
+        )
+    except Exception as exc:  # a broken index must not hide the review card
+        return [], f"policy references unavailable: {type(exc).__name__}"
+    return [
+        {
+            "document_id": hit["document_id"],
+            "title": hit["title"],
+            "section": hit["heading"],
+            "quote": hit["quote"],
+            "effective_from": hit["effective_from"],
+            "licence": hit["licence"],
+            "source_url": hit["source_url"],
+            "classification": hit["classification"],
+        }
+        for hit in hits
+    ], None
+
 
 def build_review_context(result: dict) -> dict | None:
     """Summarise why a candidate won so a reviewer can check the reasoning, not just the outcome."""
@@ -44,6 +88,8 @@ def build_review_context(result: dict) -> dict | None:
             }
         )
 
+    references, references_error = _policy_references(result, event)
+
     return {
         "unit": inventory.get("unit", "unit"),
         "order_count": orders.get("affected_order_count", 0),
@@ -65,4 +111,6 @@ def build_review_context(result: dict) -> dict | None:
         "verification_valid": bool(verification.get("valid")),
         "verification_violations": verification.get("violations", []),
         "allocations": selected.get("allocations", []),
+        "references": references,
+        "references_error": references_error,
     }

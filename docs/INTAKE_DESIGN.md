@@ -108,8 +108,8 @@ States: `received -> acked -> extracted -> routed -> pending_review | triaged ->
 - **Mid-delay price change** is not a first-class intent. Prices are read from state at calculation time; there is no price validity window and no automatic invalidation of an in-flight approval. This is the highest-value gap to close next.
 - **Partial dispatch** ("60% now, 40% next week") is not modelled; all incoming units for the affected SKU are treated as delayed.
 - **Asynchronous channels.** WhatsApp retries and delivers media; the demo is synchronous text with a deduplicated message id.
-- **Persistence.** The inbound ledger is in memory for the demo; real persistence is migration step 6 in `SCN-003_DESIGN.md`.
-- **Identity.** The demo lets the UI select the sender. A real channel derives the party from the authenticated sender; `source_type` must never be self-declared.
+- **Persistence.** The demo ledger is SQLite (`data/runtime/ledger.sqlite3`, overridable with `BHARATBIZ_LEDGER_DB`) and keeps processed messages, open intakes and the review queue across a restart. `python scripts/reset_demo.py` clears it between demos. A production store would also need migration and retention rules.
+- **Identity.** The demo UI selects the sender. Planning now requires a `supplier` account whose `party_id` matches the supplier named in the message; anything else goes to human triage. A real channel would derive the party from the authenticated account and would not let `source_type` be self-declared.
 - **Voice notes and images** are out of scope. Evidence spans assume text.
 
 ## 9. Evaluation
