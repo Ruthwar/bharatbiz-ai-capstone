@@ -112,13 +112,23 @@ def generate(out: Path, seed: int) -> None:
                             "order_date": base.isoformat(), "requested_delivery_date": d.isoformat(),
                             "quantity_units": rng.randint(3, 28), "unit": p["base_unit"], "priority": r["service_priority"],
                             "status": "open", "source_type": "synthetic"})
+    offer_by_pair = {(offer["supplier_id"], offer["sku_id"]): offer for offer in offers}
+    offers_by_supplier = {
+        supplier["supplier_id"]: [offer for offer in offers if offer["supplier_id"] == supplier["supplier_id"]]
+        for supplier in suppliers
+    }
     deliveries = []
     for i in range(50):
         s, p = rng.choice(suppliers), rng.choice(products)
+        offer = offer_by_pair.get((s["supplier_id"], p["sku_id"]))
+        if offer is None:
+            # Repair unlisted pairs without consuming extra random values and changing unrelated output.
+            supplier_offers = offers_by_supplier[s["supplier_id"]]
+            offer = supplier_offers[i % len(supplier_offers)]
         delay = rng.choice([0, 0, 0, 1, 2])
         planned = base - timedelta(days=rng.randint(1, 30))
         deliveries.append({"delivery_id": f"DEL-{i+1:04}", "purchase_order_id": f"PO-{i+1:04}",
-                           "supplier_id": s["supplier_id"], "sku_id": p["sku_id"],
+                           "supplier_id": offer["supplier_id"], "sku_id": offer["sku_id"],
                            "quantity_units": rng.randint(5, 50), "planned_date": planned.isoformat(),
                            "actual_date": (planned + timedelta(days=delay)).isoformat(), "delay_days": delay,
                            "status": "delivered", "source_type": "synthetic"})

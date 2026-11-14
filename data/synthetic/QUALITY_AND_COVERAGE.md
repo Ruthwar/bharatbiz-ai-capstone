@@ -5,6 +5,7 @@
 * **Directory Audited:** `data/synthetic/`
 * **Reference Schema:** `data/synthetic/DATA_DICTIONARY.md`
 * **Dataset Status:** Regenerated (`v2`) — `v1` confirmed excluded/historical-only.
+* **Executable Validation:** Run `python data/data_check.py` from any working directory.
 
 ---
 
@@ -22,36 +23,40 @@
 | `products.csv` | 12 | `sku_id` | None | `source_type` | Verified |
 | `suppliers.csv` | 5 | `supplier_id` | None | `source_type` | Verified |
 | `retailers.csv` | 20 | `retailer_id` | None | `source_type`, `verified_business` | Verified |
-| `supplier_products.csv` | 47 | `(supplier_id, sku_id)` | `supplier_id`, `sku_id` | `source_type` | Verified (47/60 valid pairs) |
+| `supplier_products.csv` | 47 | `(supplier_id, sku_id)` | `supplier_id`, `sku_id` | `source_type` | Verified (47/60 listed pairs) |
 | `inventory.csv` | 12 | `sku_id` | `sku_id` | `source_type` | Verified (1:1 with `products.csv`) |
 | `historical_order_lines.csv` | 80 | `order_id` (line-level) | `retailer_id`, `sku_id` | `source_type` | Verified |
 | `open_orders.csv` | 30 | `order_id` | `retailer_id`, `sku_id` | `source_type` | Verified |
-| `supplier_deliveries.csv` | 50 | `delivery_id` | `purchase_order_id`, `supplier_id`, `sku_id` | `source_type` | Verified |
+| `supplier_deliveries.csv` | 50 | `delivery_id` | `supplier_id`, `sku_id` | `source_type` | Verified against listed offers |
 | `cash_ledger.csv` | 30 | `entry_id` | None | `source_type` | Verified |
-| `scenarios.csv` / `scenarios.json` | 8 | `scenario_id` | None | Benchmark definitions | Verified (8 cases) |
-| `messages.jsonl` | 1,000 | Message ID | Entity references | Synthetic intake messages | Verified |
-| `events.jsonl` | 1,000 | Event ID | `supplier_id`, `retailer_id`, `sku_id` | Evidence-linked annotations | Verified |
+| `scenarios.csv` / `scenarios.json` | 8 | `scenario_id` | None | Benchmark definitions | Verified (8 definitions) |
+| `messages.jsonl` | 1,000 | Message ID | Entity references in `entities` | Synthetic intake messages | Verified |
+| `events.jsonl` | 1,000 | Event ID | `source_message_ids` → `messages.jsonl` | Event labels, full-source evidence spans and review metadata | Verified (structure and 1:1 links) |
 | `business_state.json` | 1 object | Snapshot | Aggregates ledger/inventory | Point-in-time state | Verified |
 | `scenario_fixtures/SCN-003.json` | 1 fixture | `SCN-003` | `scenario_id` | Deterministic test fixture | Verified |
+
+`purchase_order_id` in `supplier_deliveries.csv` is a synthetic reference identifier; there is no purchase-order master table in this dataset version. `events.jsonl` does not contain extracted entity facts.
 
 ---
 
 ## 3. Data Quality & Consistency Checks
-* **Stable IDs & Display Labels:** `supplier_id`, `retailer_id`, and `sku_id` serve as deterministic internal join keys across all relational tables. `supplier_name`, `retailer_name`, `shop_type`, and `area` are display-only labels; `events.jsonl` stores both quoted trade names and matching internal IDs.
+* **Stable IDs & Display Labels:** `supplier_id`, `retailer_id`, and `sku_id` serve as deterministic internal join keys across the relational tables. `supplier_name`, `retailer_name`, `shop_type`, and `area` are display-only labels. The JSON-string `entities` field in `messages.jsonl` stores trade names and matching internal IDs where applicable.
 * **Units & Currency Standardization:**
   * Monetary columns (`unit_cost_rupees`, `amount_rupees`, `minimum_buffer_rupees`) use exact decimal INR rounded to 2 decimal places.
-  * Quantity columns (`quantity_units`, `on_hand_units`, `reserved_units`, `incoming_units`, `reorder_point_units`, `min_order_units`, `capacity_units`) pair with explicit `unit` / `base_unit` / `units_per_case` fields.
-  * Dates (`entry_date`, `order_date`, `requested_delivery_date`, `as_of_date`, `planned_date`, `actual_date`) follow ISO 8601 (`YYYY-MM-DD`), and timestamps include `+05:30` (IST).
+  * Quantity columns (`quantity_units`, `on_hand_units`, `reserved_units`, `incoming_units`, `reorder_point_units`, `min_order_units`, `capacity_units`) use the SKU's explicit `base_unit`; order and inventory rows also carry `unit`.
+  * Dates (`entry_date`, `order_date`, `requested_delivery_date`, `as_of_date`, `planned_date`, `actual_date`) follow ISO 8601 (`YYYY-MM-DD`), and message timestamps include `+05:30` (IST).
 * **Domain Constraints:**
-  * Supplier quotes/orders are restricted strictly to the 47 valid `(supplier_id, sku_id)` rows in `supplier_products.csv`.
+  * Supplier offers and all 50 supplier-delivery rows are restricted to the 47 listed `(supplier_id, sku_id)` pairs in `supplier_products.csv`.
   * `supplier_deliveries.csv` explicitly tracks schedule variance via `planned_date`, `actual_date`, `delay_days`, and `status`.
+* **Repeatable Checks:** `data/data_check.py` validates row counts, unique keys, synthetic lineage, retailer/SKU references, supplier-offer pairs, one-to-one message-event links, scenario CSV/JSON equality and timestamp formats.
 
 ---
 
 ## 4. Coverage & Team Handoffs
-* **Coverage Summary:** Covers 12 FMCG/retail SKUs across 5 suppliers and 20 retailers (`shop_type`, `area`, `service_priority`), backed by 80 historical order lines, 30 open orders, 50 supplier deliveries, 30 cash ledger entries, 8 end-to-end scenarios (`scenarios.csv` / `scenarios.json`), and 1,000 message-event pairs.
+* **Coverage Summary:** Covers 12 FMCG/retail SKUs across 5 suppliers and 20 retailers (`shop_type`, `area`, `service_priority`), backed by 80 historical order lines, 30 open orders, 50 supplier deliveries, 30 cash ledger entries, 8 scenario definitions (`scenarios.csv` / `scenarios.json`), and 1,000 message-event pairs. SCN-003 currently has an executable scenario fixture; the remaining definitions still require fixtures and handlers.
 * **Handoff to Ruthwar & Rajesh (Labels & Evidence):**
-  * Use `events.jsonl` (`entities` + event labels) paired with `messages.jsonl` for intake extraction and classification evaluation.
+  * Use `messages.jsonl` (`intent`, JSON-string `entities`, `evidence_span`, and `uncertainty`) for intake extraction and classification evaluation.
+  * Use `events.jsonl` (`source_message_ids`, `event_type`, `evidence_spans`, and review metadata) for event-routing and review evaluation, not as a source of extracted entity facts.
   * Ground operational status labels using `open_orders.csv` (`status`, `priority`), `supplier_deliveries.csv` (`status`, `delay_days`), and `cash_ledger.csv` (`entry_type`, `minimum_buffer_rupees`).
 * **Handoff to Workflow / Dashboard:**
-  * Filter/badge synthetic records using `source_type` across all tables and `verified_business` on `retailers.csv`.
+  * Filter/badge synthetic records using `source_type` across all transactional/master tables and `verified_business` on `retailers.csv`.
