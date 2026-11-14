@@ -13,7 +13,7 @@ def test_inventory_and_order_impact(state):
     inventory = analyze_inventory(state, "SKU-003", 12)
     orders = analyze_orders(state, "SKU-003")
 
-    assert inventory.proposal["available_before_delay_units"] == 68
+    assert inventory.proposal["atp_units"] == 68
     assert inventory.proposal["immediately_available_units"] == 56
     assert orders.proposal["affected_order_count"] == 6
     assert orders.proposal["total_requested_units"] == 102

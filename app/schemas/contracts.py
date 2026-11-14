@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, Field
-
+from typing import Literal
 
 class SenderRef(BaseModel):
     party_type: Literal["retailer", "supplier", "sales_rep", "unknown"] = "unknown"
@@ -157,3 +157,32 @@ class Recommendation(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     review_status: Literal["pending_review", "approved", "rejected", "needs_clarification"] = "pending_review"
     human_approval_required: bool = True
+
+## Addition for Inventory Items
+class InventoryRow(BaseModel):
+    sku_id: str
+    on_hand_units: int
+    reserved_units: int
+    incoming_units: int
+    reorder_point_units: int
+    unit: str
+
+class OrderRow(BaseModel):
+    order_id: str
+    retailer_id: str
+    sku_id: str
+    quantity_units: int
+    requested_delivery_date: str
+    priority: str
+    status: str
+    unit: str
+    order_date: str
+
+class ProductRow(BaseModel):
+    sku_id: str
+    product_name: str
+    pack_description: str
+    base_unit: str
+    units_per_case: int
+    unit_cost_rupees: Decimal
+    category: str
