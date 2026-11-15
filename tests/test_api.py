@@ -48,7 +48,16 @@ def test_party_directory_lists_names_with_internal_ids():
 def test_scenario_catalogue_and_non_plan_execution():
     catalogue = client.get("/api/v1/scenarios")
     assert catalogue.status_code == 200
-    assert [row["scenario_id"] for row in catalogue.json()] == [f"SCN-{index:03d}" for index in range(1, 10)]
+    rows = catalogue.json()
+    assert [row["scenario_id"] for row in rows] == [f"SCN-{index:03d}" for index in range(1, 10)]
+    assert all(row["demo_outcome"] for row in rows)
+    assert len({row["message"]["text"] for row in rows}) == 9
+    assert rows[2]["message"] == {
+        "text": "Sri Venkateswara FMCG Supply reports a two-day delay for Cooking oil 1 L pouch; revised date is not confirmed.",
+        "language": "English",
+        "sender_type": "supplier",
+        "sender_id": "SUP-005",
+    }
 
     response = client.post("/api/v1/scenarios/SCN-007/run", json={"persist_review": False})
     assert response.status_code == 200

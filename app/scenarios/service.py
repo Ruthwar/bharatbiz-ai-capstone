@@ -6,6 +6,18 @@ from app.scenarios.registry import get_scenario, list_scenarios, validate_scenar
 from app.state import load_business_state
 from app.store.ledger import InboundLedger, ledger as default_ledger
 
+DEMO_OUTCOMES = {
+    "SCN-001": "Stock-only: 70/70 pieces fulfilled; no late or unmet units.",
+    "SCN-002": "SUP-001: 112/112 pieces fulfilled with 47 procured; no late or unmet units.",
+    "SCN-003": "SUP-002: 102/102 litre units fulfilled, 28 late and zero unmet; cost ₹4,876.46.",
+    "SCN-004": "Stock-only actual view: 68/102 litre units fulfilled and 34 unmet; on-time-receipt counterfactual selects SUP-005.",
+    "SCN-005": "SUP-001: preserve book stock 63 beside physical count 48; procure 19 pieces and leave zero unmet.",
+    "SCN-006": "Ask for the order reference; two orders match and no allocation plan is created.",
+    "SCN-007": "Two reports from two distinct reporters; corroborated but unverified, with no automatic competitive action.",
+    "SCN-008": "Stock-only: 56/166 litre units fulfilled and 110 unmet; on-time-receipt counterfactual selects SUP-005.",
+    "SCN-009": "Nine reported requests from three retailers; no catalogue match and no assortment change.",
+}
+
 
 def scenario_summaries() -> list[dict]:
     return [
@@ -15,6 +27,13 @@ def scenario_summaries() -> list[dict]:
             "description": fixture.description,
             "target_sku_id": fixture.target_sku_id,
             "review_status": fixture.expected.get("review_status"),
+            "demo_outcome": DEMO_OUTCOMES[fixture.scenario_id],
+            "message": {
+                "text": fixture.message.text,
+                "language": fixture.message.language,
+                "sender_type": fixture.message.sender.party_type,
+                "sender_id": fixture.message.sender.party_id,
+            },
         }
         for fixture in list_scenarios()
     ]

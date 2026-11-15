@@ -75,6 +75,8 @@ streamlit run app\dashboard\chat.py
 
 The chat page has an intake tab and a review queue. Selecting a sender in the UI simulates channel identity; a real channel derives it from the authenticated account. Receipt and completion acknowledgements are the only automated outbound text. No action executes without human approval.
 
+**Demo examples** in Intake controls cover all nine fixtures. **Load editable example** fills the sender, language, conversation and message without submitting it, so the normal intake and clarification flow can be demonstrated. **Run full scenario** applies every fixture overlay and opens the canonical decision in Scenario lab without adding it to the review queue. Plain intake processes only the visible message; it does not reproduce scenario-only demand, cash, delay or stock overlays.
+
 Model extraction is optional. With `LLM_PROVIDER=none` (the default) the deterministic rules extractor is used. To enable a provider, copy `.env.example` to `.env` (the app loads it automatically) and set `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, and `LLM_CA_BUNDLE` if the endpoint uses a private CA. Verify the connection with `python scripts/check_llm.py`. Never commit `.env`; extraction output is validated against the schema, exact evidence spans and the product catalogue, and falls back to rules on failure.
 
 ## Retail operations
