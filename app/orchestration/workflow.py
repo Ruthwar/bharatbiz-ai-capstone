@@ -16,6 +16,10 @@ from app.extraction.rules import RulesExtractor
 from app.optimization.baseline import build_candidate_plans, select_best_plan
 from app.orchestration import router
 from app.orchestration.taxonomy import TAXONOMY_VERSION, UNCLASSIFIED
+from app.scenarios.cases import run_case_scenario
+from app.scenarios.contracts import ScenarioFixture
+from app.scenarios.market import run_competitor_observation, run_product_request
+from app.scenarios.operational import run_operational_scenario
 from app.schemas.contracts import (
     BusinessEvent,
     BusinessState,
@@ -35,14 +39,33 @@ class PlanState(TypedDict, total=False):
     business_state: BusinessState
     extraction: Extraction
     event: BusinessEvent
+    scenario: ScenarioFixture | None
     authorized: bool
     auth_reason: str
     result: dict
 
 
 # Which channel identity may report which intent. A party relaying a message is not enough.
-ALLOWED_SENDERS: dict[str, tuple[str, ...]] = {"supplier_delay": ("supplier",)}
-REPORTED_PARTY_FACT: dict[str, str] = {"supplier_delay": "supplier_id"}
+ALLOWED_SENDERS: dict[str, tuple[str, ...]] = {
+    "baseline": ("sales_rep",),
+    "demand_spike": ("sales_rep",),
+    "supplier_delay": ("supplier",),
+    "limited_cash": ("sales_rep",),
+    "stock_discrepancy": ("sales_rep",),
+    "combined_disruption": ("sales_rep",),
+    "delivery_complaint": ("retailer",),
+    "damaged_item": ("retailer",),
+    "missing_item": ("retailer",),
+    "product_request": ("retailer",),
+    "competitor_observation": ("sales_rep",),
+}
+REPORTED_PARTY_FACT: dict[str, str] = {
+    "supplier_delay": "supplier_id",
+    "delivery_complaint": "retailer_id",
+    "damaged_item": "retailer_id",
+    "missing_item": "retailer_id",
+    "product_request": "retailer_id",
+}
 
 
 def _stable_id(prefix: str, *parts: str) -> str:
@@ -133,7 +156,10 @@ def _process_supplier_delay(
     extraction: Extraction,
     state: BusinessState,
     data_dir: Path | None = None,
+    scenario: ScenarioFixture | None = None,
 ) -> dict:
+    if scenario is not None:
+        return run_operational_scenario(message, event, extraction, state, scenario)
     supplier_fact = extraction.fact("supplier_id")
     delay_fact = extraction.fact("delay_days")
     sku_id = extraction.inferences.get("catalogue_sku_id")
@@ -285,7 +311,57 @@ def _event_only(message: MessageSubmission, event: BusinessEvent, extraction: Ex
     }
 
 
+def _process_operational_scenario(
+    message: MessageSubmission,
+    event: BusinessEvent,
+    extraction: Extraction,
+    state: BusinessState,
+    data_dir: Path | None = None,
+    scenario: ScenarioFixture | None = None,
+) -> dict:
+    return run_operational_scenario(message, event, extraction, state, scenario)
+
+
+def _process_case_scenario(
+    message: MessageSubmission,
+    event: BusinessEvent,
+    extraction: Extraction,
+    state: BusinessState,
+    data_dir: Path | None = None,
+    scenario: ScenarioFixture | None = None,
+) -> dict:
+    return run_case_scenario(message, event, extraction, state, scenario)
+
+
+def _process_competitor_observation(
+    message: MessageSubmission,
+    event: BusinessEvent,
+    extraction: Extraction,
+    state: BusinessState,
+    data_dir: Path | None = None,
+    scenario: ScenarioFixture | None = None,
+) -> dict:
+    return run_competitor_observation(message, event, extraction, state, scenario)
+
+
+def _process_product_request(
+    message: MessageSubmission,
+    event: BusinessEvent,
+    extraction: Extraction,
+    state: BusinessState,
+    data_dir: Path | None = None,
+    scenario: ScenarioFixture | None = None,
+) -> dict:
+    return run_product_request(message, event, extraction, state, scenario)
+
+
+for intent in ("baseline", "demand_spike", "limited_cash", "stock_discrepancy", "combined_disruption"):
+    router.register(intent, _process_operational_scenario)
+for intent in ("delivery_complaint", "damaged_item", "missing_item"):
+    router.register(intent, _process_case_scenario)
 router.register("supplier_delay", _process_supplier_delay)
+router.register("competitor_observation", _process_competitor_observation)
+router.register("product_request", _process_product_request)
 
 
 def _load_state(flow: PlanState) -> dict:
@@ -322,7 +398,7 @@ def _authorize(flow: PlanState) -> dict:
             f"{intent.replace('_', ' ')} may only be reported by a {' or '.join(allowed)} account; "
             f"this message came from a {sender.party_type} account."
         )
-    elif not sender.party_id:
+    elif not sender.party_id and intent in REPORTED_PARTY_FACT:
         reason = "Sending account is not linked to a trade party; the report cannot be authorised."
     else:
         field = REPORTED_PARTY_FACT.get(intent)
@@ -346,7 +422,14 @@ def _plan_node(flow: PlanState) -> dict:
     event = flow["event"]
     handler = router.resolve(extraction.primary_intent)
     return {
-        "result": handler(submission, event, extraction, flow["business_state"], flow.get("data_dir"))
+        "result": handler(
+            submission,
+            event,
+            extraction,
+            flow["business_state"],
+            flow.get("data_dir"),
+            flow.get("scenario"),
+        )
     }
 
 
@@ -430,6 +513,10 @@ def _build_plan_graph():
 plan_graph = _build_plan_graph()
 
 
-def process_message(message: MessageSubmission, data_dir: Path | None = None) -> dict:
-    output = plan_graph.invoke({"submission": message, "data_dir": data_dir})
+def process_message(
+    message: MessageSubmission,
+    data_dir: Path | None = None,
+    scenario: ScenarioFixture | None = None,
+) -> dict:
+    output = plan_graph.invoke({"submission": message, "data_dir": data_dir, "scenario": scenario})
     return output["result"]

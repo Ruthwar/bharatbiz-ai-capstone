@@ -1,0 +1,55 @@
+{
+  "scenario_id": "SCN-008",
+  "name": "Combined disruption",
+  "description": "Demand uplift, supplier delay and a late retailer receipt are composed once through explicit overlays.",
+  "target_sku_id": "SKU-003",
+  "message": {
+    "message_id": "DEMO-SCN-008-001",
+    "source_type": "synthetic",
+    "text": "Combined disruption for Cooking oil 1 L pouch: demand up 60 percent, SUP-005 delayed two days, and retailer payment delayed.",
+    "observed_at": "2026-11-01T13:00:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v2-seed-20261105",
+    "sender": {"party_type": "sales_rep", "channel": "api"}
+  },
+  "overlays": {
+    "demand_multiplier": "1.60",
+    "demand_rounding": "ceiling",
+    "original_supplier_id": "SUP-005",
+    "supplier_delay_days": 2,
+    "delayed_incoming_units": 12,
+    "opening_cash_rupees": "50000.00",
+    "receipts": [
+      {
+        "receipt_id": "RCPT-SCN-008-001",
+        "retailer_id": "RET-003",
+        "amount_rupees": "30000.00",
+        "expected_date": "2026-11-01",
+        "actual_date": "2026-11-08"
+      }
+    ],
+    "planning_horizon": "2026-11-04",
+    "procurement_costs": "immediate_outflow"
+  },
+  "assumptions": {
+    "demand_multiplier": "1.60",
+    "rounding": "ceiling_per_order_line",
+    "opening_cash_rupees": "50000.00",
+    "minimum_cash_buffer_rupees": "50000.00",
+    "procurement_costs": "immediate_outflow"
+  },
+  "unknowns": ["supplier_confirmed_revised_delivery_date", "retailer_confirmed_actual_payment_date", "observed_sell_through_after_the_spike"],
+  "expected": {
+    "review_status": "pending_review",
+    "selected_candidate_id": "stock-only",
+    "requested_units": 166,
+    "scenario_usable_units": 56,
+    "fulfilled_units": 56,
+    "unmet_units": 110,
+    "counterfactual": "receipts_on_time",
+    "counterfactual_selected_candidate_id": "supplier-SUP-005",
+    "counterfactual_procurement_units": 110,
+    "verification_valid": true
+  }
+}

@@ -8,10 +8,12 @@ from langgraph.graph import END, START, StateGraph
 from app.extraction.base import Extraction
 from app.orchestration import router
 from app.orchestration.acks import ack_text, language_key
+from app.orchestration.retail import persist_retail
 from app.orchestration.review import build_review_context
 from app.orchestration.slots import SLOT_SPECS, missing_slots, next_question
 from app.orchestration.taxonomy import UNCLASSIFIED
 from app.orchestration.workflow import PlanState, plan_graph
+from app.scenarios.contracts import ScenarioFixture
 from app.schemas.contracts import (
     EvidenceFact,
     InboundAck,
@@ -21,11 +23,13 @@ from app.schemas.contracts import (
 )
 from app.state import StateLoadError, StateVersionMismatch
 from app.store.ledger import InboundLedger, ledger as default_ledger
+from app.store.retail import RetailStore, retail_store as default_retail_store
 
 
 class InboundState(PlanState, total=False):
     original: MessageSubmission
     ledger: InboundLedger
+    retail_store: RetailStore
     conversation_id: str
     rounds: int
     duplicate: bool
@@ -67,6 +71,8 @@ def _queue_record(result: dict, routed_action: str) -> dict:
         "recommendation_status": recommendation.get("review_status"),
         "mode": result.get("mode", "rules_mock"),
         "state_version": event.get("state_version"),
+        "case_id": (result.get("retail_context") or {}).get("case_id"),
+        "draft_id": (result.get("retail_context") or {}).get("draft_id"),
         "why": build_review_context(result),
     }
 
@@ -112,12 +118,32 @@ def _slot_gate(flow: InboundState) -> dict:
     intent = event["event_type"]
     extraction = _extraction_from_result(result)
     party_type = message.sender.party_type if message.sender else "unknown"
-    missing = missing_slots(intent, extraction)
+    available = set()
+    if message.sender and message.sender.party_id:
+        if party_type == "retailer":
+            available.add("retailer_id")
+        elif party_type == "supplier":
+            available.add("supplier_id")
+    missing = missing_slots(intent, extraction, available)
+    dynamic_slot = (result.get("case_context") or {}).get("clarification_slot")
+    additional_missing = []
+    if dynamic_slot == "order_reference" and dynamic_slot not in missing:
+        additional_missing.append(dynamic_slot)
+        missing.append(dynamic_slot)
     spec = SLOT_SPECS.get(intent)
 
     question = None
     if missing and spec is not None and rounds < spec.max_rounds:
-        question = next_question(intent, extraction, party_type, message.language)
+        question = next_question(
+            intent,
+            extraction,
+            party_type,
+            message.language,
+            available=available,
+            additional_missing=additional_missing,
+        )
+        if additional_missing:
+            question = result.get("question") or question
 
     handler = router.resolve(intent)
     recommendation = result.get("recommendation") or {}
@@ -141,6 +167,7 @@ def _slot_gate(flow: InboundState) -> dict:
         mode=result.get("mode", "rules_mock"),
         rounds=rounds,
     ).model_dump(mode="json")
+    payload["result"] = result
 
     return {
         "payload": payload,
@@ -165,12 +192,15 @@ def _ask_follow_up(flow: InboundState) -> dict:
 
 def _close_and_queue(flow: InboundState) -> dict:
     message = flow["original"]
-    flow["ledger"].close_intake(flow["conversation_id"])
+    result = flow["result"]
+    persist_retail(flow["submission"], result, flow["business_state"], flow["retail_store"])
+    flow["payload"]["result"] = result
     if flow.get("queue"):
         flow["ledger"].queue_for_review(
-            flow["result"]["event"]["event_id"],
-            _queue_record(flow["result"], flow["routed_action"]),
+            result["event"]["event_id"],
+            _queue_record(result, flow["routed_action"]),
         )
+    flow["ledger"].close_intake(flow["conversation_id"])
     flow["ledger"].record_result(message.message_id, flow["payload"])
     return {}
 
@@ -230,11 +260,20 @@ def process_inbound(
     message: MessageSubmission,
     ledger: InboundLedger = default_ledger,
     data_dir: Path | None = None,
+    scenario: ScenarioFixture | None = None,
+    retail_store: RetailStore = default_retail_store,
 ) -> dict:
     """Run one inbound message through the graph. Failures are acknowledged and triaged, never dropped."""
     try:
         output = inbound_graph.invoke(
-            {"original": message, "ledger": ledger, "data_dir": data_dir, "duplicate": False}
+            {
+                "original": message,
+                "ledger": ledger,
+                "retail_store": retail_store,
+                "data_dir": data_dir,
+                "scenario": scenario,
+                "duplicate": False,
+            }
         )
     except (StateVersionMismatch, StateLoadError) as exc:
         return _record_processing_error(message, exc, ledger)

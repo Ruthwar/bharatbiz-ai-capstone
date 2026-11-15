@@ -7,12 +7,17 @@ from pydantic import BaseModel, Field
 from app.channels.chat import ChatInbound, to_submission
 from app.extraction import configured_extractor
 from app.orchestration.inbound import process_inbound
+from app.orchestration.review_actions import DraftSafetyError, decide_review
 from app.orchestration.workflow import process_message
+from app.retail_api import router as retail_router
+from app.scenarios.service import run_scenario, scenario_summaries
 from app.schemas.contracts import MessageSubmission
 from app.state import StateLoadError, StateVersionMismatch, load_business_state
-from app.store.ledger import ledger
+from app.store.ledger import ReviewDecisionError, ledger
+from app.store.retail import retail_store
 
 app = FastAPI(title="BharatBiz AI Capstone API", version="0.2.0")
+app.include_router(retail_router)
 
 
 @app.get("/health")
@@ -70,6 +75,27 @@ def party_directory() -> list[dict]:
     ]
 
 
+@app.get("/api/v1/scenarios")
+def scenarios() -> list[dict]:
+    return scenario_summaries()
+
+
+class ScenarioRunRequest(BaseModel):
+    persist_review: bool = False
+
+
+@app.post("/api/v1/scenarios/{scenario_id}/run")
+def execute_scenario(scenario_id: str, payload: ScenarioRunRequest | None = None) -> dict:
+    if scenario_id not in {row["scenario_id"] for row in scenario_summaries()}:
+        raise HTTPException(status_code=404, detail="Unknown scenario")
+    try:
+        return run_scenario(scenario_id, persist=bool(payload and payload.persist_review))
+    except (ValueError, StateVersionMismatch) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except StateLoadError as exc:
+        raise HTTPException(status_code=500, detail="Synthetic operational state is unavailable") from exc
+
+
 @app.get("/api/v1/review/pending")
 def pending_reviews() -> list[dict]:
     return ledger.pending_reviews()
@@ -82,7 +108,10 @@ class ReviewDecision(BaseModel):
 
 @app.post("/api/v1/review/{event_id}")
 def decide(event_id: str, payload: ReviewDecision) -> dict:
-    record = ledger.decide(event_id, payload.decision, payload.reviewer)
+    try:
+        record = decide_review(ledger, retail_store, event_id, payload.decision, payload.reviewer)
+    except (ReviewDecisionError, DraftSafetyError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if record is None:
         raise HTTPException(status_code=404, detail="Unknown review item")
     return record

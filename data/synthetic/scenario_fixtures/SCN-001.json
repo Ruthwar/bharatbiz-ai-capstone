@@ -1,0 +1,26 @@
+{
+  "scenario_id": "SCN-001",
+  "name": "Baseline day",
+  "description": "Plan from the starting operational state without a disruption overlay.",
+  "target_sku_id": "SKU-005",
+  "message": {
+    "message_id": "DEMO-SCN-001-001",
+    "source_type": "synthetic",
+    "text": "Baseline day planning for Biscuits family carton.",
+    "observed_at": "2026-11-01T09:00:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v2-seed-20261105",
+    "sender": {"party_type": "sales_rep", "channel": "api"}
+  },
+  "overlays": {},
+  "expected": {
+    "review_status": "pending_review",
+    "selected_candidate_id": "stock-only",
+    "requested_units": 70,
+    "fulfilled_units": 70,
+    "late_units": 0,
+    "unmet_units": 0,
+    "verification_valid": true
+  }
+}

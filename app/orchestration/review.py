@@ -46,7 +46,37 @@ def _policy_references(result: dict, event: dict) -> tuple[list[dict], str | Non
 
 
 def build_review_context(result: dict) -> dict | None:
-    """Summarise why a candidate won so a reviewer can check the reasoning, not just the outcome."""
+    """Summarise the evidence and trade-offs behind any reviewable outcome."""
+    event = result.get("event") or {}
+    recommendation = result.get("recommendation") or {}
+    verification = result.get("verification") or {}
+    references, references_error = _policy_references(result, event)
+    shared = {
+        "review_kind": result.get("review_kind"),
+        "scenario_id": result.get("scenario_id"),
+        "source_text": (result.get("message") or {}).get("text", ""),
+        "evidence": event.get("extracted_facts", []),
+        "assumptions": recommendation.get("assumptions", []),
+        "unknowns": event.get("uncertainties", []),
+        "warnings": recommendation.get("warnings", []),
+        "references": references,
+        "references_error": references_error,
+        "retail_context": result.get("retail_context"),
+    }
+    if result.get("case_context") is not None:
+        return {
+            **shared,
+            "case_context": result["case_context"],
+            "question": result.get("question"),
+            "verification_valid": None,
+        }
+    if result.get("market_context") is not None:
+        return {
+            **shared,
+            "market_context": result["market_context"],
+            "verification_valid": None,
+        }
+
     selected = result.get("selected_plan")
     if not selected:
         return None
@@ -56,9 +86,6 @@ def build_review_context(result: dict) -> dict | None:
     }
     inventory = agents.get("inventory", {})
     orders = agents.get("orders", {})
-    recommendation = result.get("recommendation") or {}
-    event = result.get("event") or {}
-    verification = result.get("verification") or {}
 
     requested = orders.get("total_requested_units", 0)
     usable = inventory.get("immediately_available_units", 0)
@@ -88,9 +115,8 @@ def build_review_context(result: dict) -> dict | None:
             }
         )
 
-    references, references_error = _policy_references(result, event)
-
     return {
+        **shared,
         "unit": inventory.get("unit", "unit"),
         "order_count": orders.get("affected_order_count", 0),
         "requested_units": requested,
@@ -103,6 +129,9 @@ def build_review_context(result: dict) -> dict | None:
         "selected_arrival_date": (selected.get("supplier_option") or {}).get("scenario_arrival_date"),
         "selected_cost_rupees": selected["total_cost_rupees"],
         "alternatives": alternatives,
+        "excluded_candidates": result.get("excluded_candidates", []),
+        "counterfactuals": result.get("counterfactuals", []),
+        "scenario_view": result.get("scenario_view"),
         "source_text": (result.get("message") or {}).get("text", ""),
         "evidence": event.get("extracted_facts", []),
         "assumptions": recommendation.get("assumptions", []),
@@ -111,6 +140,7 @@ def build_review_context(result: dict) -> dict | None:
         "verification_valid": bool(verification.get("valid")),
         "verification_violations": verification.get("violations", []),
         "allocations": selected.get("allocations", []),
+        "cash_schedule": selected.get("cash_projection", {}).get("daily_schedule", []),
         "references": references,
         "references_error": references_error,
     }

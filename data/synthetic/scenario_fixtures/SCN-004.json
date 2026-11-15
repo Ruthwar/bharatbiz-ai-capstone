@@ -1,0 +1,46 @@
+{
+  "scenario_id": "SCN-004",
+  "name": "Limited cash and delayed retailer payment",
+  "description": "A delayed retailer receipt prevents immediate procurement even though an on-time receipt would fund it.",
+  "target_sku_id": "SKU-003",
+  "message": {
+    "message_id": "DEMO-SCN-004-001",
+    "source_type": "synthetic",
+    "text": "Limited cash for Cooking oil 1 L pouch: RET-003 payment of 30000 rupees expected today is now delayed until 2026-11-08.",
+    "observed_at": "2026-11-01T09:00:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v2-seed-20261105",
+    "sender": {"party_type": "sales_rep", "channel": "api"}
+  },
+  "overlays": {
+    "opening_cash_rupees": "50000.00",
+    "receipts": [
+      {
+        "receipt_id": "RCPT-SCN-004-001",
+        "retailer_id": "RET-003",
+        "amount_rupees": "30000.00",
+        "expected_date": "2026-11-01",
+        "actual_date": "2026-11-08"
+      }
+    ],
+    "planning_horizon": "2026-11-04",
+    "procurement_costs": "immediate_outflow"
+  },
+  "assumptions": {
+    "opening_cash_rupees": "50000.00",
+    "minimum_cash_buffer_rupees": "50000.00",
+    "procurement_costs": "immediate_outflow"
+  },
+  "unknowns": ["retailer_confirmed_actual_payment_date"],
+  "expected": {
+    "review_status": "pending_review",
+    "selected_candidate_id": "stock-only",
+    "requested_units": 102,
+    "fulfilled_units": 68,
+    "unmet_units": 34,
+    "counterfactual": "receipts_on_time",
+    "counterfactual_selected_candidate_id": "supplier-SUP-005",
+    "verification_valid": true
+  }
+}

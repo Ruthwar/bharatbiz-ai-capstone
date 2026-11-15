@@ -7,11 +7,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.store.ledger import ledger
+from app.store.retail import retail_store
 
 
 def main() -> int:
     ledger.reset()
-    print("Demo ledger cleared: no pending reviews, open intakes or processed messages.")
+    retail_store.reset()
+    print("Demo ledger and retail store cleared: no reviews, intakes, cases, drafts or observations.")
     return 0
 
 
