@@ -17,7 +17,7 @@ Contract guarantees:
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from app.schemas.contracts import AgentResult, BusinessState
 
@@ -126,8 +126,10 @@ def analyze_inventory(
             "Delayed incoming units must be between zero and the available incoming quantity"
         )
 
+    # Demand baseline from open orders (this is Rajesh's data, read-only here)
     open_demand = demand_baseline(state.open_orders, sku_id)
 
+    # Availability chain
     available_now = available_units(row["on_hand_units"], row["reserved_units"])
     atp = available_to_promise(
         row["on_hand_units"], row["reserved_units"], row["incoming_units"]
@@ -138,12 +140,17 @@ def analyze_inventory(
         row["incoming_units"] - delayed_incoming_units,
     )
     shortfall = shortage_units(atp, open_demand)
+    immediate_shortfall = shortage_units(immediately_available, open_demand)
 
+    # Reorder decision
     reorder = reorder_flag(row["on_hand_units"], row["reorder_point_units"])
 
+    # Expiry check (only when the field exists)
     expiry_date = row.get("expiry_date")
-    expiry_risk = is_expiring(expiry_date, state.as_of, planning_horizon_days)
+    as_of_date = state.as_of.date() if hasattr(state.as_of, "date") else state.as_of
+    expiry_risk = is_expiring(expiry_date, as_of_date, planning_horizon_days)
 
+    # Assumptions and unmet-data warnings
     assumptions: list[str] = []
     if delayed_incoming_units > 0:
         assumptions.append(
@@ -175,6 +182,7 @@ def analyze_inventory(
             "immediately_available_units": immediately_available,
             "open_demand_units": open_demand,
             "shortage_units": shortfall,
+            "immediate_shortage_units": immediate_shortfall,
             "reorder_required": reorder,
             "reorder_point_units": row["reorder_point_units"],
             "expiry_risk": expiry_risk,

@@ -23,6 +23,7 @@ Optional fields (warned about when absent):
 | `immediately_available_units` | ATP after removing delayed incoming |
 | `open_demand_units` | sum of open order quantities for this SKU |
 | `shortage_units` | max(0, open_demand − ATP) |
+| `immediate_shortage_units` | max(0, open_demand − immediately_available) |
 | `reorder_required` | on_hand ≤ reorder_point |
 | `expiry_risk` | true if expiry_date within planning horizon |
 | `assumptions[]` | unmet-data warnings, delay assumptions |
@@ -44,7 +45,7 @@ Optional fields (warned about when absent):
 
 ## Handoffs
 - **Rajesh (orders):** use `atp_units` and `immediately_available_units` to size allocations; `shortage_units` triggers reallocation.
-- **Rohit (supplier):** use `shortage_units` and `reorder_required` to size purchase proposals; incoming delay is passed in via `delayed_incoming_units`.
+- **Rohit (supplier):** use `immediate_shortage_units` and `reorder_required` to size time-sensitive purchase proposals when supply is delayed. Use `shortage_units` for long-term ATP gaps. Incoming delay is passed in via `delayed_incoming_units`.
 - **Ranjith (optimization/verification):** verify `on_hand − reserved + incoming == atp` and `shortage_units >= 0`.
 - **Ruthwar (contracts/orchestration):** every result carries `state_version`; stale versions must be rejected upstream. `ValueError` from this agent should be caught and routed to triage/ABSTAIN.
 

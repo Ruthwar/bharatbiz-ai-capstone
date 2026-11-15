@@ -248,3 +248,46 @@ def test_delayed_incoming_out_of_bounds_rejected():
     )
     with pytest.raises(ValueError):
         analyze_inventory(state, "SKU-1", delayed_incoming_units=6)
+
+def test_expiry_date_handling_does_not_crash():
+    """Ensure datetime vs date subtraction works (Issue 3 fix)."""
+    state = make_state(
+        inventory_rows=[
+            {
+                "sku_id": "SKU-EXP",
+                "on_hand_units": 10,
+                "reserved_units": 0,
+                "incoming_units": 0,
+                "reorder_point_units": 5,
+                "unit": "case",
+                "expiry_date": "2026-01-10", # Exactly 5 days from as_of
+            }
+        ]
+    )
+    # as_of in make_state is datetime(2026, 1, 5, tzinfo=timezone.utc)
+    # This should not raise TypeError
+    result = analyze_inventory(state, "SKU-EXP", planning_horizon_days=7)
+    assert result.proposal["expiry_risk"] is True
+
+def test_immediate_shortage_units_logic():
+    """Ensure immediate_shortage_units captures the gap created by delays (Issue 2 fix)."""
+    state = make_state(
+        inventory_rows=[
+            {
+                "sku_id": "SKU-1",
+                "on_hand_units": 40,
+                "reserved_units": 10,
+                "incoming_units": 50,
+                "reorder_point_units": 20,
+                "unit": "case",
+            }
+        ],
+        open_orders=[
+            {"order_id": "O1", "sku_id": "SKU-1", "quantity_units": 70, "status": "open"},
+        ],
+    )
+    # Delay 40 of 50 incoming -> ATP is 80 (no long-term shortage), but immediate available is 40.
+    delayed = analyze_inventory(state, "SKU-1", delayed_incoming_units=40)
+    
+    assert delayed.proposal["shortage_units"] == 0
+    assert delayed.proposal["immediate_shortage_units"] == 30 # 70 demand - 40 immediate
