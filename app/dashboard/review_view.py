@@ -63,8 +63,8 @@ def render_decision(context: dict) -> None:
     st.write(
         f"{context['usable_units']} {unit} of usable stock covers "
         f"{min(context['usable_units'], context['requested_units'])} of {context['requested_units']} {unit} "
-        f"requested across {context['order_count']} orders. Buying {context['required_units']} {unit} leaves "
-        f"{context['selected_unmet_units']} unmet and {context['selected_late_units']} late"
+        f"requested across {context['order_count']} orders. The immediate supply gap is {context['required_units']} {unit}. "
+        f"The selected plan leaves {context['selected_unmet_units']} unmet and {context['selected_late_units']} late"
         + (f", with arrival on {arrival}." if arrival else ".")
     )
     st.dataframe(
@@ -84,6 +84,45 @@ def render_decision(context: dict) -> None:
         hide_index=True,
     )
     st.caption(RANKING_RULE)
+    exclusions = context.get("excluded_candidates") or []
+    if exclusions:
+        section_title("Excluded candidates", "Infeasible options remain visible with their exact exclusion reasons.")
+        st.dataframe(
+            [
+                {
+                    "Candidate": row["candidate_id"],
+                    "Supplier": row.get("supplier_id") or "—",
+                    "Reasons": ", ".join(row["reasons"]),
+                    "Details": "; ".join(f"{key}={value}" for key, value in row.get("details", {}).items()),
+                }
+                for row in exclusions
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+    for counterfactual in context.get("counterfactuals") or []:
+        selected = counterfactual["selected_plan"]
+        section_title(
+            "Counterfactual: receipts on time",
+            "Expected receipt dates replace actual dates only in this separate simulation; the operational plan is unchanged.",
+        )
+        columns = st.columns(5)
+        columns[0].metric("Candidate", selected["candidate_id"])
+        columns[1].metric("Fulfilled", selected["fulfilled_units"])
+        columns[2].metric("Late", selected["late_units"])
+        columns[3].metric("Unmet", selected["unmet_units"])
+        columns[4].metric("Cost", _money(selected["total_cost_rupees"]))
+        st.caption(
+            f"Ending cash {_money(selected['cash_projection']['ending_cash_rupees'])} · "
+            f"{len(counterfactual.get('excluded_candidates') or [])} excluded candidates · "
+            f"verification {'passed' if counterfactual['verification']['valid'] else 'failed'}"
+        )
+    if context.get("scenario_view") or context.get("cash_schedule"):
+        with st.expander("Scenario overlays and dated cash schedule"):
+            if context.get("scenario_view"):
+                st.json(context["scenario_view"])
+            if context.get("cash_schedule"):
+                st.dataframe(context["cash_schedule"], width="stretch", hide_index=True)
     trade_offs = _trade_offs(context)
     if trade_offs:
         section_title("What the extra money buys")
@@ -184,10 +223,65 @@ def render_allocations(context: dict) -> None:
     )
 
 
+def render_case(context: dict) -> None:
+    case = context["case_context"]
+    section_title("Complaint assessment", "Match the report to an order without guessing or executing a retailer response.")
+    columns = st.columns(3)
+    columns[0].metric("Retailer", case.get("retailer_id") or "Unknown")
+    columns[1].metric("SKU", case.get("sku_id") or "Unresolved")
+    columns[2].metric("Matching orders", case["matched_order_count"])
+    retail = context.get("retail_context") or {}
+    if retail.get("case_id"):
+        st.caption(
+            f"Durable case {retail['case_id']} · priority {case.get('priority', 'normal')} · "
+            f"reply draft {retail.get('draft_id') or 'not available'}"
+        )
+        if case.get("priority_reasons"):
+            st.write("Priority reasons: " + "; ".join(case["priority_reasons"]))
+    if case.get("matched_orders"):
+        st.dataframe(case["matched_orders"], width="stretch", hide_index=True)
+    if context.get("question"):
+        st.info(context["question"])
+    elif case.get("clarification_slot"):
+        st.warning(f"Clarification required: {case['clarification_slot'].replace('_', ' ')}")
+    st.caption("No refund, replacement, stock mutation, or outbound response is executed.")
+
+
+def render_market_signal(context: dict) -> None:
+    market = context["market_context"]
+    section_title("Reported market signal", "Evidence is aggregated for review and remains explicitly unverified.")
+    if market["signal_type"] == "competitor_observation":
+        columns = st.columns(3)
+        columns[0].metric("Unique reports", market["unique_observation_count"])
+        columns[1].metric("Distinct reporters", market["distinct_reporter_count"])
+        columns[2].metric("Corroboration", market["corroboration"].replace("_", " "))
+        st.dataframe(market["observations"], width="stretch", hide_index=True)
+    else:
+        columns = st.columns(3)
+        columns[0].metric("Distinct retailers", market["distinct_retailer_count"])
+        columns[1].metric("Reported requests", market["reported_request_count"])
+        columns[2].metric("Catalogue match", "Yes" if market["catalogue_match"] else "No")
+        st.write(f"**Requested pack:** {market['requested_product_label']}")
+        stock = market.get("stock_check") or {}
+        if stock.get("status") == "indicative_only":
+            st.info(
+                f"Indicative stock check: {stock['available_units']} base units available, "
+                f"{stock['allocated_to_open_orders_units']} allocated to open orders, "
+                f"{stock['unallocated_units']} unallocated. This does not confirm an order or reserve stock."
+            )
+        st.dataframe(market["requests"], width="stretch", hide_index=True)
+    st.warning("Reported and unverified: no pricing, procurement, supplier-availability, or assortment decision is inferred.")
+
+
 def render_review_context(context: dict | None) -> None:
     if not context:
         return
-    render_decision(context)
+    if context.get("review_kind") == "case_review":
+        render_case(context)
+    elif context.get("review_kind") == "market_signal_review":
+        render_market_signal(context)
+    else:
+        render_decision(context)
+        render_allocations(context)
     render_evidence(context)
     render_policies(context)
-    render_allocations(context)

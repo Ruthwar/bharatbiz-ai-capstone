@@ -197,7 +197,19 @@ def test_human_review_decision_clears_the_queue():
 
 
 def test_only_implemented_intents_have_handlers():
-    assert registered_intents() == ("supplier_delay",)
+    assert registered_intents() == (
+        "baseline",
+        "combined_disruption",
+        "competitor_observation",
+        "damaged_item",
+        "delivery_complaint",
+        "demand_spike",
+        "limited_cash",
+        "missing_item",
+        "product_request",
+        "stock_discrepancy",
+        "supplier_delay",
+    )
 
 
 def test_evidence_that_is_not_verbatim_is_dropped():

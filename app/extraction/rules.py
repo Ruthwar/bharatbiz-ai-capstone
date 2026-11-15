@@ -3,14 +3,22 @@
 import re
 
 from app.extraction.base import Extraction
+from app.extraction.retail_intents import RETAIL_SOURCES, refine_rule_intents
 from app.schemas.contracts import BusinessState, EvidenceFact, IntentMatch, MessageSubmission
 
 RULES = (
+    ("combined_disruption", re.compile(r"combined\s+disruption", re.I)),
+    ("limited_cash", re.compile(r"limited\s+cash|cash\s+(?:constraint|shortage)|payment\s+(?:is\s+)?delayed", re.I)),
+    ("stock_discrepancy", re.compile(r"stock\s+discrepancy|physical\s+count|stock\s+mismatch", re.I)),
+    ("demand_spike", re.compile(r"demand\s+(?:spike|surge)|demand\s+up|orders?.+rise\s+by", re.I)),
+    ("baseline", re.compile(r"baseline\s+day", re.I)),
     ("supplier_delay", re.compile(r"delay|late|postpon", re.I)),
+    ("damaged_item", re.compile(r"damaged|broken|leaking", re.I)),
+    ("missing_item", re.compile(r"missing\s+(?:item|pack|quantity)|short\s+shipped", re.I)),
     ("delivery_complaint", re.compile(r"delivery|delivered|arriv", re.I)),
     ("product_request", re.compile(r"request|need|asking|pack", re.I)),
-    ("scheme_question", re.compile(r"scheme|offer|discount", re.I)),
     ("competitor_observation", re.compile(r"competitor|nearby shop", re.I)),
+    ("scheme_question", re.compile(r"scheme|offer|discount", re.I)),
 )
 DELAY_PATTERN = re.compile(
     r"\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten)[-\s]days?\s+delay\b",
@@ -154,13 +162,28 @@ class RulesExtractor:
                 _fact("delay_days", str(delay_days), text, delay_match.start(), delay_match.start() + len(delay_span))
             )
 
+        uplift_match = re.search(r"\b(?:rise\s+by|up|increase(?:d)?\s+by)\s+(\d+(?:\.\d+)?)\s*(?:percent|%)", text, re.I)
+        if uplift_match:
+            facts.append(_fact("demand_uplift_percent", uplift_match.group(1), text, *uplift_match.span(1)))
+
+        count_match = re.search(r"\bphysical\s+count\s+(?:is|of|:)?\s*(\d+)\b", text, re.I)
+        if count_match:
+            facts.append(_fact("physical_count_units", count_match.group(1), text, *count_match.span(1)))
+
+        order_match = re.search(r"\b(ORD-\d{4})\b", text, re.I)
+        if order_match:
+            facts.append(_fact("order_reference", order_match.group(1).upper(), text, *order_match.span(1)))
+
         product = resolve_product(state, text)
         if product:
             facts.append(_fact("product", product["label"], text, product["start"], product["end"]))
             inferences["catalogue_sku_id"] = product["sku_id"]
 
+        intents = classify(text)
+        if message.source_type in RETAIL_SOURCES:
+            intents = refine_rule_intents(intents, text)
         return Extraction(
-            intents=classify(text),
+            intents=intents,
             facts=facts,
             inferences=inferences,
             mode="rules_mock",

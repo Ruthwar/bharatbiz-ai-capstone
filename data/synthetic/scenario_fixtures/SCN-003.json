@@ -1,6 +1,8 @@
 {
   "scenario_id": "SCN-003",
   "name": "Supplier delay",
+  "description": "The original cooking-oil supplier reports a two-day delay and alternative supply is compared.",
+  "target_sku_id": "SKU-003",
   "message": {
     "message_id": "DEMO-SCN-003-001",
     "source_type": "supplier_update",
@@ -15,6 +17,13 @@
       "channel": "api"
     }
   },
+  "overlays": {
+    "original_supplier_id": "SUP-005",
+    "supplier_delay_days": 2,
+    "delayed_incoming_units": 12,
+    "planning_horizon": "2026-11-04",
+    "procurement_costs": "immediate_outflow"
+  },
   "assumptions": {
     "sku_id": "SKU-003",
     "original_supplier_id": "SUP-005",
@@ -26,5 +35,20 @@
     "supplier_confirmed_revised_delivery_date",
     "source_stated_delayed_quantity",
     "purchase_order_reference"
-  ]
+  ],
+  "expected": {
+    "review_status": "pending_review",
+    "selected_candidate_id": "supplier-SUP-002",
+    "requested_units": 102,
+    "scenario_usable_units": 56,
+    "procurement_units": 46,
+    "fulfilled_units": 102,
+    "late_units": 28,
+    "unmet_units": 0,
+    "total_cost_rupees": "4876.46",
+    "scenario_arrival_date": "2026-11-03",
+    "ending_cash_rupees": "245123.54",
+    "headroom_rupees": "195123.54",
+    "verification_valid": true
+  }
 }

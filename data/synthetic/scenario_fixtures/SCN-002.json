@@ -1,0 +1,35 @@
+{
+  "scenario_id": "SCN-002",
+  "name": "Demand spike",
+  "description": "A sales representative reports a 60 percent uplift for Biscuits small carton open orders.",
+  "target_sku_id": "SKU-006",
+  "message": {
+    "message_id": "DEMO-SCN-002-001",
+    "source_type": "synthetic",
+    "text": "Demand spike: open orders for Biscuits small carton are expected to rise by 60 percent.",
+    "observed_at": "2026-11-01T09:00:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v2-seed-20261105",
+    "sender": {"party_type": "sales_rep", "channel": "api"}
+  },
+  "overlays": {
+    "demand_multiplier": "1.60",
+    "demand_rounding": "ceiling"
+  },
+  "assumptions": {
+    "demand_multiplier": "1.60",
+    "rounding": "ceiling_per_order_line"
+  },
+  "unknowns": ["observed_sell_through_after_the_spike"],
+  "expected": {
+    "review_status": "pending_review",
+    "selected_candidate_id": "supplier-SUP-001",
+    "requested_units": 112,
+    "scenario_usable_units": 65,
+    "procurement_units": 47,
+    "late_units": 0,
+    "unmet_units": 0,
+    "verification_valid": true
+  }
+}

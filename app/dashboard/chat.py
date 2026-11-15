@@ -13,11 +13,15 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.dashboard.retail_view import render_retail_desk  # noqa: E402
 from app.dashboard.review_view import (  # noqa: E402
     render_allocations,
+    render_case,
     render_decision,
     render_evidence,
+    render_market_signal,
     render_policies,
+    render_review_context,
 )
 from app.dashboard.theme import (  # noqa: E402
     apply_theme,
@@ -29,12 +33,13 @@ from app.dashboard.theme import (  # noqa: E402
     quote_html,
     section_title,
 )
+from app.orchestration.review import build_review_context  # noqa: E402
 from app.rag.corpus import DOC_TYPES, load_documents  # noqa: E402
 from app.rag.retrieval import retrieve  # noqa: E402
 from app.state import StateLoadError, load_business_state  # noqa: E402
 
 API_URL = os.getenv("BHARATBIZ_API_URL", "http://127.0.0.1:8000")
-PAGES = ["Overview", "Inbox", "Decision desk", "Operations data", "Knowledge"]
+PAGES = ["Overview", "Inbox", "Scenario lab", "Decision desk", "Retail desk", "Operations data", "Knowledge"]
 
 st.set_page_config(page_title="BharatBiz Operations", layout="wide", initial_sidebar_state="expanded")
 apply_theme()
@@ -48,6 +53,17 @@ def post(path: str, payload: dict) -> dict:
         method="POST",
     )
     with urllib.request.urlopen(request, timeout=45) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def patch(path: str, payload: dict) -> dict:
+    request = urllib.request.Request(
+        f"{API_URL}{path}",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="PATCH",
+    )
+    with urllib.request.urlopen(request, timeout=15) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -267,13 +283,25 @@ def render_processing_result(result: dict | None) -> None:
             go_to("Decision desk")
 
 
-def render_inbox(parties: list[dict]) -> None:
+def _load_inbox_example(example: dict, sender_label: str) -> None:
+    message = example["message"]
+    st.session_state.inbox_sender = sender_label
+    st.session_state.inbox_language = message["language"]
+    st.session_state.inbox_conversation = f"demo-{example['scenario_id'].lower()}"
+    st.session_state.message_draft = message["text"]
+    st.session_state.last_result = None
+    st.session_state.chat = []
+
+
+def render_inbox(parties: list[dict], scenarios: list[dict]) -> None:
     page_header(
         "Channel workspace",
         "Message inbox",
         "Simulate a supplier or retailer update, inspect the extracted evidence, and send the resulting case to review.",
         "Demo channel · identity is selected, not authenticated",
     )
+    examples = {row["scenario_id"]: row for row in scenarios if row.get("message")}
+    sender_labels = {}
     with st.container(border=True):
         section_title("Intake controls", "A production channel would derive the sender from the authenticated account.")
         sender_column, language_column, conversation_column = st.columns([2, 1, 1.4])
@@ -282,24 +310,78 @@ def render_inbox(parties: list[dict]) -> None:
                 f"{party['party_name']} · {party['party_type']} · {party['party_id']}": party
                 for party in parties
             }
-            sender = labels[sender_column.selectbox("Sender", list(labels))]
+            sender_labels = {
+                (party["party_type"], party["party_id"]): label
+                for label, party in labels.items()
+            }
+            for scenario_id, example in examples.items():
+                message = example["message"]
+                key = (message["sender_type"], message["sender_id"])
+                if key not in sender_labels:
+                    party_name = f"{scenario_id} field reporter" if key[1] else "Synthetic planning desk"
+                    label = f"{party_name} · {key[0]} · {key[1] or 'no reporter ID'}"
+                    labels[label] = {
+                        "party_name": party_name,
+                        "party_type": key[0],
+                        "party_id": key[1],
+                    }
+                    sender_labels[key] = label
+            sender = labels[sender_column.selectbox("Sender", list(labels), key="inbox_sender")]
             sender_type, sender_id = sender["party_type"], sender["party_id"]
         else:
             sender_type = sender_column.selectbox("Sender type", ["retailer", "supplier", "sales_rep", "unknown"])
             sender_id = sender_column.text_input("Sender account ID", "SUP-005")
-        language = language_column.selectbox("Language", ["English", "Hinglish", "Hindi"])
-        conversation_id = conversation_column.text_input("Conversation ID", "demo-conversation-1")
+        language = language_column.selectbox("Language", ["English", "Hinglish", "Hindi"], key="inbox_language")
+        conversation_id = conversation_column.text_input("Conversation ID", "demo-conversation-1", key="inbox_conversation")
+
+        if examples:
+            st.divider()
+            section_title(
+                "Demo examples",
+                "Load an editable intake message, or run the complete fixture to inspect its canonical decision.",
+            )
+            selected_example_id = st.selectbox(
+                "Example scenario",
+                list(examples),
+                key="inbox_example",
+                format_func=lambda scenario_id: f"{scenario_id} · {examples[scenario_id]['name']}",
+            )
+            example = examples[selected_example_id]
+            st.write(example["description"])
+            st.caption(f"Expected full-scenario decision: {example['demo_outcome']}")
+            load_column, run_column = st.columns(2)
+            message = example["message"]
+            load_column.button(
+                "Load editable example",
+                key=f"load-inbox-{selected_example_id}",
+                on_click=_load_inbox_example,
+                args=(example, sender_labels.get((message["sender_type"], message["sender_id"]), "")),
+                disabled=not parties,
+                width="stretch",
+            )
+            if run_column.button(
+                "Run full scenario",
+                key=f"run-inbox-{selected_example_id}",
+                type="primary",
+                width="stretch",
+            ):
+                try:
+                    result = post(f"/api/v1/scenarios/{selected_example_id}/run", {"persist_review": False})
+                except urllib.error.HTTPError as exc:
+                    st.error(f"API returned {exc.code}: {exc.read().decode('utf-8')}")
+                except urllib.error.URLError as exc:
+                    st.error(f"Cannot reach the API at {API_URL}: {exc.reason}")
+                else:
+                    st.session_state.scenario_result = result
+                    st.session_state.scenario_result_id = selected_example_id
+                    st.session_state.scenario_selector = selected_example_id
+                    go_to("Scenario lab")
+            st.caption("Editable intake processes only the visible message. Run full scenario to include all fixture overlays and assumptions.")
 
     left, right = st.columns([1.15, 1])
     with left:
         with st.container(border=True):
             section_title("Sandbox conversation", "Only receipt and completion acknowledgements are automated.")
-            if st.button("Load supplier-delay example"):
-                fixture = json.loads(
-                    (PROJECT_ROOT / "data" / "synthetic" / "scenario_fixtures" / "SCN-003.json").read_text(encoding="utf-8")
-                )
-                st.session_state.message_draft = fixture["message"]["text"]
-                st.rerun()
             history = st.session_state.setdefault("chat", [])
             for entry in history:
                 with st.chat_message(entry["role"]):
@@ -346,9 +428,110 @@ def render_inbox(parties: list[dict]) -> None:
             render_processing_result(st.session_state.get("last_result"))
 
 
+def render_scenario_lab(scenarios: list[dict]) -> None:
+    page_header(
+        "Deterministic simulations",
+        "Scenario lab",
+        "Run every capstone scenario through the same extraction, planning, verification and human-review contracts.",
+        f"{len(scenarios)} explicit fixtures · base business data is never mutated",
+    )
+    if not scenarios:
+        empty_state("Scenario catalogue unavailable", "Start the API to load and run the scenario fixtures.")
+        return
+    by_id = {row["scenario_id"]: row for row in scenarios}
+    selected_id = st.selectbox(
+        "Scenario",
+        list(by_id),
+        key="scenario_selector",
+        format_func=lambda scenario_id: f"{scenario_id} · {by_id[scenario_id]['name']}",
+    )
+    selected = by_id[selected_id]
+    st.write(selected["description"])
+    persist = st.checkbox("Persist the outcome in the SQLite review queue", value=True)
+    if st.button("Run selected scenario", type="primary"):
+        try:
+            st.session_state.scenario_result = post(
+                f"/api/v1/scenarios/{selected_id}/run", {"persist_review": persist}
+            )
+            st.session_state.scenario_result_id = selected_id
+        except urllib.error.HTTPError as exc:
+            st.error(f"API returned {exc.code}: {exc.read().decode('utf-8')}")
+        except urllib.error.URLError as exc:
+            st.error(f"Cannot reach the API at {API_URL}: {exc.reason}")
+
+    result = st.session_state.get("scenario_result")
+    if not result:
+        empty_state("No scenario run yet", "Select a fixture and run it to inspect the complete decision trace.")
+        return
+    if st.session_state.get("scenario_result_id") != selected_id:
+        st.info("The displayed result is from the previously selected scenario. Run this scenario to replace it.")
+    event = result.get("event") or {}
+    recommendation = result.get("recommendation") or {}
+    st.markdown(
+        f"{badge(event.get('event_type', 'unclassified').replace('_', ' '), 'warning')} "
+        f"{badge(result.get('review_kind', 'triage'))} {badge(result.get('mode', 'unknown'))}",
+        unsafe_allow_html=True,
+    )
+    st.caption(f"Event {event.get('event_id')} · state {event.get('state_version')}")
+    st.markdown(
+        f"<div class='bb-recommendation'><div class='bb-recommendation-label'>Recommendation</div>"
+        f"<div class='bb-recommendation-text'>{escape(recommendation.get('summary', ''))}</div></div>",
+        unsafe_allow_html=True,
+    )
+    inbound = result.get("inbound") or {}
+    if inbound.get("question"):
+        st.info(inbound["question"])
+    if inbound:
+        st.caption(f"Review route: {inbound.get('routed_action')} · status: {recommendation.get('review_status')}")
+    render_review_context(build_review_context(result))
+
+
+def render_draft_review_actions(item: dict) -> None:
+    draft_id = item["draft_id"]
+    draft = safe_get(f"/api/v1/retail/drafts/{draft_id}", None)
+    if not draft:
+        st.error("The linked reply draft is unavailable; no review decision was submitted.")
+        return
+    with st.container(border=True):
+        section_title(
+            "Retailer reply review",
+            "Approve or edit the safe draft. Approval does not send the reply or resolve the case.",
+        )
+        with st.form(f"decision-draft-{item['event_id']}"):
+            final_text = st.text_area("Reply text", draft["final_text"] or draft["text"], height=125)
+            reviewer = st.text_input("Reviewer ID", "demo-owner")
+            note = st.text_input("Review note")
+            approve_column, reject_column = st.columns(2)
+            approved = approve_column.form_submit_button("Approve reply", type="primary", width="stretch")
+            rejected = reject_column.form_submit_button("Reject reply", width="stretch")
+        if approved or rejected:
+            try:
+                post(
+                    f"/api/v1/retail/drafts/{draft_id}/review",
+                    {
+                        "event_id": item["event_id"],
+                        "decision": "approve" if approved else "reject",
+                        "reviewer": reviewer,
+                        "note": note or None,
+                        "final_text": final_text,
+                    },
+                )
+            except urllib.error.HTTPError as exc:
+                st.error(f"API returned {exc.code}: {exc.read().decode('utf-8')}")
+            except urllib.error.URLError as exc:
+                st.error(f"Cannot reach the API at {API_URL}: {exc.reason}")
+            else:
+                st.toast("Reply review saved; use Retail desk to record a manual send.")
+                st.rerun()
+
+
 def render_review_actions(item: dict, context: dict | None) -> None:
+    if item.get("draft_id"):
+        render_draft_review_actions(item)
+        return
     selected_id = item["event_id"]
     planned = context is not None
+    operational = planned and context.get("review_kind") == "operational_plan"
     with st.container(border=True):
         section_title(
             "Reviewer decision" if planned else "Triage decision",
@@ -357,17 +540,17 @@ def render_review_actions(item: dict, context: dict | None) -> None:
         reviewer = st.text_input("Reviewer ID", "demo-owner", key=f"reviewer-{selected_id}")
         approve_column, reject_column, note_column = st.columns([1, 1, 2.5])
         if approve_column.button(
-            "Approve plan" if planned else "Mark reviewed",
+            "Approve plan" if operational else "Mark reviewed",
             type="primary",
             key=f"approve-{selected_id}",
-            disabled=planned and not context["verification_valid"],
+            disabled=planned and context.get("verification_valid") is False,
             width="stretch",
         ):
             post(f"/api/v1/review/{selected_id}", {"decision": "approve", "reviewer": reviewer})
             st.toast("Case updated in the demo ledger.")
             st.rerun()
         if reject_column.button(
-            "Reject plan" if planned else "Dismiss case",
+            "Reject plan" if operational else "Dismiss case",
             key=f"reject-{selected_id}",
             width="stretch",
         ):
@@ -427,6 +610,19 @@ def render_decision_desk(review_items: list[dict]) -> None:
         if not context:
             st.warning("This case does not have a structured plan. Review the triage summary before resolving it.")
             render_review_actions(item, None)
+            return
+        if context.get("review_kind") in {"case_review", "market_signal_review"}:
+            review_tab, evidence_tab, policies_tab = st.tabs(["Assessment", "Evidence & unknowns", "Policy basis"])
+            with review_tab:
+                if context["review_kind"] == "case_review":
+                    render_case(context)
+                else:
+                    render_market_signal(context)
+            with evidence_tab:
+                render_evidence(context)
+            with policies_tab:
+                render_policies(context)
+            render_review_actions(item, context)
             return
         selected = next((row for row in context["alternatives"] if row["selected"]), None)
         columns = st.columns(5)
@@ -626,6 +822,7 @@ except StateLoadError as exc:
 
 inference = safe_get("/api/v1/status", None)
 parties = safe_get("/api/v1/parties", [])
+scenarios = safe_get("/api/v1/scenarios", [])
 review_items = safe_get("/api/v1/review/pending", [])
 stock_rows = inventory_rows(state)
 open_order_rows = order_rows(state)
@@ -668,9 +865,13 @@ with st.sidebar:
 if page == "Overview":
     render_overview(state, review_items, stock_rows, open_order_rows)
 elif page == "Inbox":
-    render_inbox(parties)
+    render_inbox(parties, scenarios)
+elif page == "Scenario lab":
+    render_scenario_lab(scenarios)
 elif page == "Decision desk":
     render_decision_desk(review_items)
+elif page == "Retail desk":
+    render_retail_desk(state, get, post, patch, review_items)
 elif page == "Operations data":
     render_operations(state, stock_rows, open_order_rows)
 else:
