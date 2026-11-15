@@ -1,7 +1,7 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "corpus_as_of": "2026-11-13",
-  "notes": "Each query names the primary document a reviewer should be shown. 'acceptable' lists other documents that answer the question correctly; they count for recall@k but not for primary@1. Queries were written before running the evaluation and were not tuned to individual rankings, except that documents which genuinely answer the same question were recorded as acceptable.",
+  "notes": "Each query names the primary document a reviewer should be shown. 'acceptable' lists other documents that answer the question correctly; they count for recall@k but not for primary@1. Queries were written before running the evaluation and were not tuned to individual rankings, except that documents which genuinely answer the same question were recorded as acceptable. GQ-31 through GQ-40 cover the newly added scenario policies and SOPs.",
   "queries": [
     {
       "id": "GQ-01",
@@ -212,6 +212,76 @@
       "expected": "POL-DAT-004",
       "acceptable": ["SOP-INT-001", "SOP-REV-002"],
       "why": "Verbatim span equals quoted text or the item is rejected."
+    },
+    {
+      "id": "GQ-31",
+      "query": "How should a demand simulation differ from a confirmed retailer order?",
+      "expected": "POL-DEM-007",
+      "acceptable": ["SOP-DEM-007"],
+      "why": "A scenario is labelled, reproducible and never treated as an observed order or execution instruction."
+    },
+    {
+      "id": "GQ-32",
+      "query": "What must be recorded when physical stock differs from book stock?",
+      "expected": "POL-STK-007",
+      "acceptable": ["SOP-STK-007"],
+      "why": "The count, variance, evidence, recount and approved adjustment must remain auditable."
+    },
+    {
+      "id": "GQ-33",
+      "query": "Are expected retailer receipts counted as available cash for procurement?",
+      "expected": "POL-LIQ-007",
+      "acceptable": ["POL-CSH-002", "SOP-LIQ-007"],
+      "why": "Liquidity is checked conservatively and uncertain receipts are not netted against immediate outflow."
+    },
+    {
+      "id": "GQ-34",
+      "query": "Can a retailer complaint promise a refund or revised delivery date?",
+      "expected": "POL-RCM-007",
+      "acceptable": ["SOP-RCM-007", "POL-COM-006"],
+      "why": "Complaint intake acknowledges receipt only; remedies and substantive replies require human approval."
+    },
+    {
+      "id": "GQ-35",
+      "query": "How many independent sources are needed before a market signal influences a scenario?",
+      "expected": "POL-MSC-007",
+      "acceptable": ["SOP-MSC-007"],
+      "why": "A single source is a lead and corroboration must be independent and scope-matched."
+    },
+    {
+      "id": "GQ-36",
+      "query": "Which fields are required to reproduce a demand simulation?",
+      "expected": "SOP-DEM-007",
+      "acceptable": ["POL-DEM-007"],
+      "why": "The SOP requires scenario id, state version, horizon, assumptions, baseline and deterministic outputs."
+    },
+    {
+      "id": "GQ-37",
+      "query": "Can unapproved counted stock be used to fulfil an open order?",
+      "expected": "POL-STK-007",
+      "acceptable": ["SOP-STK-007"],
+      "why": "Only approved stock adjustments may enter fulfilment planning."
+    },
+    {
+      "id": "GQ-38",
+      "query": "What happens when liquidity headroom is negative?",
+      "expected": "POL-LIQ-007",
+      "acceptable": ["SOP-LIQ-007", "POL-CSH-002"],
+      "why": "The candidate is excluded before ranking and routed for review rather than treated as an expensive option."
+    },
+    {
+      "id": "GQ-39",
+      "query": "How should a retailer complaint be handled when the order reference is missing?",
+      "expected": "SOP-RCM-007",
+      "acceptable": ["POL-RCM-007", "SOP-INT-001"],
+      "why": "Preserve the message, request only missing decision-relevant facts and route unresolved cases to human triage."
+    },
+    {
+      "id": "GQ-40",
+      "query": "Should forwarded copies of one market report count as independent corroboration?",
+      "expected": "POL-MSC-007",
+      "acceptable": ["SOP-MSC-007"],
+      "why": "Copies and forwarded messages count as one source and must not be double counted."
     }
   ]
 }

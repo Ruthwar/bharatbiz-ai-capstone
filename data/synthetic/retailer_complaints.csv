@@ -1,0 +1,26 @@
+complaint_id,retailer_id,sku_id,complaint_date,category,status,resolution_notes,state_version,source_type
+CMP-001,RET-019,SKU-003,2026-10-12,delivery_delay,open,Resolved via credit note,synthetic-v2-seed-20261105,synthetic
+CMP-002,RET-015,SKU-001,2026-10-30,billing_dispute,resolved,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-003,RET-002,SKU-009,2026-10-30,short_shipment,closed,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-004,RET-019,SKU-001,2026-10-26,billing_dispute,resolved,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-005,RET-018,SKU-004,2026-10-05,billing_dispute,resolved,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-006,RET-005,SKU-001,2026-09-26,damaged_goods,resolved,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-007,RET-009,SKU-005,2026-09-30,damaged_goods,investigating,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-008,RET-008,SKU-011,2026-10-08,delivery_delay,resolved,Resolved via credit note,synthetic-v2-seed-20261105,synthetic
+CMP-009,RET-014,SKU-010,2026-10-22,billing_dispute,resolved,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-010,RET-014,SKU-004,2026-10-06,damaged_goods,resolved,Resolved via credit note,synthetic-v2-seed-20261105,synthetic
+CMP-011,RET-010,SKU-008,2026-10-07,damaged_goods,open,Resolved via credit note,synthetic-v2-seed-20261105,synthetic
+CMP-012,RET-009,SKU-006,2026-09-22,short_shipment,open,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-013,RET-004,SKU-001,2026-10-24,billing_dispute,open,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-014,RET-003,SKU-003,2026-10-12,delivery_delay,investigating,Resolved via credit note,synthetic-v2-seed-20261105,synthetic
+CMP-015,RET-006,SKU-007,2026-09-22,short_shipment,resolved,Resolved via credit note,synthetic-v2-seed-20261105,synthetic
+CMP-016,RET-001,SKU-006,2026-10-24,damaged_goods,investigating,Resolved via credit note,synthetic-v2-seed-20261105,synthetic
+CMP-017,RET-006,SKU-007,2026-10-29,delivery_delay,open,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-018,RET-014,SKU-008,2026-09-27,damaged_goods,closed,Resolved via credit note,synthetic-v2-seed-20261105,synthetic
+CMP-019,RET-009,SKU-012,2026-10-20,damaged_goods,resolved,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-020,RET-005,SKU-006,2026-10-02,billing_dispute,investigating,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-021,RET-002,SKU-010,2026-10-10,short_shipment,closed,Resolved via credit note,synthetic-v2-seed-20261105,synthetic
+CMP-022,RET-014,SKU-009,2026-09-27,delivery_delay,closed,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-023,RET-019,SKU-006,2026-09-22,short_shipment,resolved,Resolved via credit note,synthetic-v2-seed-20261105,synthetic
+CMP-024,RET-018,SKU-005,2026-09-21,damaged_goods,investigating,Pending review or verified with supplier,synthetic-v2-seed-20261105,synthetic
+CMP-025,RET-012,SKU-012,2026-10-14,short_shipment,resolved,Resolved via credit note,synthetic-v2-seed-20261105,synthetic
