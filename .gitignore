@@ -8,6 +8,7 @@ __pycache__/
 data/pilot_deidentified/*
 !data/pilot_deidentified/README.md
 data/evaluation_runs/
+data/runtime/
 *.log
 desktop.ini
 ~$*

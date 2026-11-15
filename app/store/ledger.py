@@ -17,6 +17,10 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+class ReviewDecisionError(ValueError):
+    pass
+
+
 @dataclass
 class PendingIntake:
     conversation_id: str
@@ -72,11 +76,17 @@ class InboundLedger:
                 record for record in self._queue.values() if record["review_status"] == "pending_review"
             ]
 
+    def get_review(self, event_id: str) -> dict | None:
+        with self._lock:
+            return self._queue.get(event_id)
+
     def decide(self, event_id: str, decision: str, reviewer: str) -> dict | None:
         with self._lock:
             record = self._queue.get(event_id)
             if record is None:
                 return None
+            if record["review_status"] != "pending_review":
+                raise ReviewDecisionError(f"review {event_id} is already {record['review_status']}")
             record["review_status"] = "approved" if decision == "approve" else "rejected"
             record["reviewer"] = reviewer
             record["decided_at"] = _now()
@@ -196,23 +206,41 @@ class SqliteLedger(InboundLedger):
             ).fetchall()
         return [json.loads(row[0]) for row in rows]
 
-    def decide(self, event_id: str, decision: str, reviewer: str) -> dict | None:
+    def get_review(self, event_id: str) -> dict | None:
         with self._lock:
             row = self._conn.execute(
                 "SELECT record FROM review_queue WHERE event_id = ?", (event_id,)
             ).fetchone()
-            if row is None:
-                return None
-            record = json.loads(row[0])
-            record["review_status"] = "approved" if decision == "approve" else "rejected"
-            record["reviewer"] = reviewer
-            record["decided_at"] = _now()
-            self._conn.execute(
-                "UPDATE review_queue SET review_status = ?, record = ? WHERE event_id = ?",
-                (record["review_status"], json.dumps(record, ensure_ascii=False), event_id),
-            )
-            self._conn.commit()
-            return record
+        return json.loads(row[0]) if row else None
+
+    def decide(self, event_id: str, decision: str, reviewer: str) -> dict | None:
+        with self._lock:
+            self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = self._conn.execute(
+                    "SELECT record FROM review_queue WHERE event_id = ?", (event_id,)
+                ).fetchone()
+                if row is None:
+                    self._conn.rollback()
+                    return None
+                record = json.loads(row[0])
+                if record["review_status"] != "pending_review":
+                    raise ReviewDecisionError(f"review {event_id} is already {record['review_status']}")
+                record["review_status"] = "approved" if decision == "approve" else "rejected"
+                record["reviewer"] = reviewer
+                record["decided_at"] = _now()
+                cursor = self._conn.execute(
+                    "UPDATE review_queue SET review_status = ?, record = ? "
+                    "WHERE event_id = ? AND review_status = 'pending_review'",
+                    (record["review_status"], json.dumps(record, ensure_ascii=False), event_id),
+                )
+                if cursor.rowcount != 1:
+                    raise ReviewDecisionError(f"review {event_id} has already been decided")
+                self._conn.commit()
+                return record
+            except Exception:
+                self._conn.rollback()
+                raise
 
     def reset(self) -> None:
         with self._lock:

@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from typing import Literal
+
 
 class SenderRef(BaseModel):
     party_type: Literal["retailer", "supplier", "sales_rep", "unknown"] = "unknown"
@@ -95,11 +95,28 @@ class BusinessState(BaseModel):
     minimum_cash_buffer_rupees: Decimal
 
 
+class CashDay(BaseModel):
+    date: date
+    receipts_rupees: Decimal
+    procurement_outflow_rupees: Decimal
+    closing_cash_rupees: Decimal
+    headroom_rupees: Decimal
+    feasible: bool
+
+
 class CashProjection(BaseModel):
     ending_cash_rupees: Decimal
     minimum_buffer_rupees: Decimal
     headroom_rupees: Decimal
     feasible: bool
+    daily_schedule: list[CashDay] = Field(default_factory=list)
+
+
+class CandidateExclusion(BaseModel):
+    candidate_id: str
+    supplier_id: str | None = None
+    reasons: list[str]
+    details: dict[str, str] = Field(default_factory=dict)
 
 
 class SupplierOption(BaseModel):

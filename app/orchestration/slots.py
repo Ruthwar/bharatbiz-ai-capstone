@@ -15,6 +15,24 @@ class SlotSpec(BaseModel):
 
 
 SLOT_SPECS: dict[str, SlotSpec] = {
+    "baseline": SlotSpec(intent="baseline", required=["product"], askable_by=["sales_rep"]),
+    "demand_spike": SlotSpec(
+        intent="demand_spike",
+        required=["product", "demand_uplift_percent"],
+        askable_by=["sales_rep"],
+    ),
+    "limited_cash": SlotSpec(intent="limited_cash", required=["product"], askable_by=["sales_rep"]),
+    "stock_discrepancy": SlotSpec(
+        intent="stock_discrepancy",
+        required=["product", "physical_count_units"],
+        askable_by=["sales_rep"],
+    ),
+    "combined_disruption": SlotSpec(
+        intent="combined_disruption",
+        required=["product"],
+        askable_by=["sales_rep"],
+        questions_allowed=False,
+    ),
     "supplier_delay": SlotSpec(
         intent="supplier_delay",
         required=["supplier_id", "product", "delay_days"],
@@ -41,8 +59,8 @@ SLOT_SPECS: dict[str, SlotSpec] = {
     ),
     "product_request": SlotSpec(
         intent="product_request",
-        required=["retailer_id", "product"],
-        optional=["quantity"],
+        required=["retailer_id"],
+        optional=["product", "quantity"],
         askable_by=["retailer"],
     ),
     "scheme_question": SlotSpec(
@@ -62,8 +80,13 @@ SLOT_SPECS: dict[str, SlotSpec] = {
 
 # Only these slots can change the recommended plan, so only these may be asked for.
 DECISION_RELEVANT: dict[str, tuple[str, ...]] = {
+    "baseline": ("product",),
+    "demand_spike": ("product", "demand_uplift_percent"),
+    "limited_cash": ("product",),
+    "stock_discrepancy": ("product", "physical_count_units"),
+    "combined_disruption": ("product",),
     "supplier_delay": ("product", "delay_days", "supplier_id"),
-    "delivery_complaint": ("product", "retailer_id"),
+    "delivery_complaint": ("product", "retailer_id", "order_reference"),
     "damaged_item": ("product", "retailer_id"),
     "missing_item": ("product", "retailer_id"),
     "product_request": ("product", "retailer_id"),
@@ -73,6 +96,21 @@ DECISION_RELEVANT: dict[str, tuple[str, ...]] = {
 }
 
 QUESTIONS: dict[tuple[str, str], dict[str, str]] = {
+    ("demand_spike", "demand_uplift_percent"): {
+        "English": "What demand uplift percentage should be simulated?",
+        "Hinglish": "Demand uplift kitne percent simulate karna hai?",
+        "Hindi": "कितने प्रतिशत मांग वृद्धि का अनुकरण करना है?",
+    },
+    ("stock_discrepancy", "physical_count_units"): {
+        "English": "What is the reported physical count in base units?",
+        "Hinglish": "Reported physical count base units mein kitna hai?",
+        "Hindi": "रिपोर्ट की गई भौतिक गिनती आधार इकाइयों में कितनी है?",
+    },
+    ("delivery_complaint", "order_reference"): {
+        "English": "Which order reference is this complaint about?",
+        "Hinglish": "Yeh complaint kis order reference ke baare mein hai?",
+        "Hindi": "यह शिकायत किस ऑर्डर संदर्भ के बारे में है?",
+    },
     ("supplier_delay", "product"): {
         "English": "Which product and pack is affected?",
         "Hinglish": "Kaunsa product aur pack affected hai?",
@@ -144,14 +182,22 @@ def _has_slot(extraction: Extraction, slot: str) -> bool:
     return extraction.fact(slot) is not None
 
 
-def missing_slots(intent: str, extraction: Extraction) -> list[str]:
+def missing_slots(intent: str, extraction: Extraction, available: set[str] | None = None) -> list[str]:
     spec = SLOT_SPECS.get(intent)
     if not spec:
         return []
-    return [slot for slot in spec.required if not _has_slot(extraction, slot)]
+    available = available or set()
+    return [slot for slot in spec.required if slot not in available and not _has_slot(extraction, slot)]
 
 
-def next_question(intent: str, extraction: Extraction, party_type: str, language: str) -> str | None:
+def next_question(
+    intent: str,
+    extraction: Extraction,
+    party_type: str,
+    language: str,
+    available: set[str] | None = None,
+    additional_missing: list[str] | None = None,
+) -> str | None:
     """One template question for the highest-priority missing slot, or None."""
     spec = SLOT_SPECS.get(intent)
     if not spec or not spec.questions_allowed:
@@ -159,7 +205,7 @@ def next_question(intent: str, extraction: Extraction, party_type: str, language
     if party_type not in spec.askable_by:
         return None
     language = language if language in {"English", "Hindi", "Hinglish"} else "English"
-    for slot in missing_slots(intent, extraction):
+    for slot in [*missing_slots(intent, extraction, available), *(additional_missing or [])]:
         if slot not in DECISION_RELEVANT.get(intent, ()):
             continue
         template = QUESTIONS.get((intent, slot))

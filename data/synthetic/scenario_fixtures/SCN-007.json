@@ -1,0 +1,57 @@
+{
+  "scenario_id": "SCN-007",
+  "name": "Competitor observation",
+  "description": "Repeated field reports are deduplicated and corroboration counts distinct reporters, not report volume.",
+  "message": {
+    "message_id": "DEMO-SCN-007-001",
+    "source_type": "synthetic",
+    "text": "Competitor ValueMart is offering 20 percent off Rice 5 kg bag at a nearby shop in Kukatpally.",
+    "observed_at": "2026-11-01T12:00:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v2-seed-20261105",
+    "sender": {"party_type": "sales_rep", "party_id": "REP-017", "channel": "api"}
+  },
+  "observations": [
+    {
+      "observation_id": "OBS-SCN-007-001",
+      "reporter_id": "REP-017",
+      "reported_at": "2026-11-01T12:00:00+05:30",
+      "competitor_name": "ValueMart",
+      "product_label": "Rice 5 kg bag",
+      "offer": "20 percent off",
+      "area": "Kukatpally",
+      "source_message_id": "DEMO-SCN-007-001"
+    },
+    {
+      "observation_id": "OBS-SCN-007-002",
+      "reporter_id": "REP-017",
+      "reported_at": "2026-11-01T12:05:00+05:30",
+      "competitor_name": "ValueMart",
+      "product_label": "Rice 5 kg bag",
+      "offer": "20 percent off",
+      "area": "Kukatpally",
+      "source_message_id": "DEMO-SCN-007-REPEAT"
+    },
+    {
+      "observation_id": "OBS-SCN-007-003",
+      "reporter_id": "REP-018",
+      "reported_at": "2026-11-01T12:20:00+05:30",
+      "competitor_name": "ValueMart",
+      "product_label": "Rice 5 kg bag",
+      "offer": "20 percent off",
+      "area": "Kukatpally",
+      "source_message_id": "DEMO-SCN-007-SECOND"
+    }
+  ],
+  "unknowns": ["competitor_price_verification", "promotion_start_date", "promotion_end_date", "observed_sell_through_impact"],
+  "expected": {
+    "review_kind": "market_signal_review",
+    "review_status": "pending_review",
+    "unique_observation_count": 2,
+    "distinct_reporter_count": 2,
+    "corroboration": "corroborated_unverified",
+    "verification_status": "reported_unverified",
+    "creates_allocation_plan": false
+  }
+}

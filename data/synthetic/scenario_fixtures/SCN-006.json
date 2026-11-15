@@ -1,0 +1,41 @@
+{
+  "scenario_id": "SCN-006",
+  "name": "Retailer delivery complaint",
+  "description": "A retailer reports a late cooking-oil delivery but multiple matching orders make the order reference ambiguous.",
+  "message": {
+    "message_id": "DEMO-SCN-006-001",
+    "source_type": "retailer_message",
+    "text": "My Cooking oil 1 L pouch delivery has not arrived. Please check it.",
+    "observed_at": "2026-11-02T11:00:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v2-seed-20261105",
+    "sender": {"party_type": "retailer", "party_id": "RET-001", "channel": "whatsapp"}
+  },
+  "history": [
+    {
+      "order_id": "ORD-0016",
+      "retailer_id": "RET-001",
+      "sku_id": "SKU-003",
+      "requested_delivery_date": "2026-11-01",
+      "status": "open",
+      "quantity_units": 20
+    },
+    {
+      "order_id": "ORD-0028",
+      "retailer_id": "RET-001",
+      "sku_id": "SKU-003",
+      "requested_delivery_date": "2026-11-04",
+      "status": "open",
+      "quantity_units": 18
+    }
+  ],
+  "unknowns": ["order_reference", "actual_delivery_status", "delivery_proof"],
+  "expected": {
+    "review_kind": "case_review",
+    "review_status": "needs_clarification",
+    "clarification_slot": "order_reference",
+    "matched_order_count": 2,
+    "creates_allocation_plan": false
+  }
+}

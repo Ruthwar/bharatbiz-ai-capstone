@@ -3,6 +3,7 @@
 import re
 
 from app.extraction.base import Extraction
+from app.extraction.retail_intents import reconcile_sender
 from app.extraction.rules import DAY_WORDS, find_named_row, match_catalogue_name, resolve_product
 from app.schemas.contracts import BusinessState, EvidenceFact, MessageSubmission
 
@@ -138,6 +139,7 @@ def validate_extraction(
     normalise_spans(extraction, message.text)
     violations.extend(apply_catalogue_authority(extraction, state))
     violations.extend(resolve_business_references(extraction, message.text, state))
+    reconcile_sender(extraction, message)
 
     for fact in extraction.facts:
         if fact.field == "delay_days":
