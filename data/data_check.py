@@ -114,11 +114,21 @@ def validate():
         _require(row["retailer_id"] in retailers, f"scheduled_receivables: unresolved {row['retailer_id']}")
         _require(row["currency"] == "INR", f"{row['receivable_id']}: unsupported currency")
         _require_money(row["amount_rupees"], f"{row['receivable_id']}: amount_rupees")
-        _require(date.fromisoformat(row["due_date"]) >= date.fromisoformat(row["issue_date"]), f"{row['receivable_id']}: due date before issue date")
+        issue_date = date.fromisoformat(row["issue_date"])
+        due_date = date.fromisoformat(row["due_date"])
+        as_of = date.fromisoformat(state["as_of_date"])
+        _require(due_date >= issue_date, f"{row['receivable_id']}: due date before issue date")
+        days_until_due = (due_date - as_of).days
+        expected_status = "overdue" if days_until_due < 0 else "due_soon" if days_until_due <= 7 else "scheduled"
+        _require(row["status"] == expected_status, f"{row['receivable_id']}: status contradicts due_date")
     for row in tables["retailer_complaints"]:
         _require(row["retailer_id"] in retailers, f"retailer_complaints: unresolved {row['retailer_id']}")
         _require(row["sku_id"] in products, f"retailer_complaints: unresolved {row['sku_id']}")
         date.fromisoformat(row["complaint_date"])
+        if row["status"] in {"open", "investigating"}:
+            _require("pending" in row["resolution_notes"].lower(), f"{row['complaint_id']}: active complaint has resolution note")
+        else:
+            _require("pending" not in row["resolution_notes"].lower(), f"{row['complaint_id']}: closed complaint is still pending")
     for row in tables["market_observations"]:
         _require(row["retailer_id"] in retailers, f"market_observations: unresolved {row['retailer_id']}")
         _require(row["sku_id"] in products, f"market_observations: unresolved {row['sku_id']}")

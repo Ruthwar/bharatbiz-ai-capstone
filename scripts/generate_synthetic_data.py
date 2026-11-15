@@ -105,10 +105,18 @@ def generate_scheduled_receivables(num_rows: int, retailers: list[dict], rng: ra
                                    base: date, state_version: str) -> list[dict]:
     """Generate deterministic scheduled retailer receivables."""
     receivables = []
-    statuses = ["scheduled", "due_soon", "collected", "overdue"]
     for i in range(1, num_rows + 1):
         issue_date = base - timedelta(days=rng.randint(1, 30))
         due_date = issue_date + timedelta(days=rng.choice([7, 14, 15, 21]))
+
+        days_until_due = (due_date - base).days
+
+        if days_until_due < 0:
+            status = "overdue"
+        elif days_until_due <= 7:
+            status = "due_soon"
+        else:
+            status = "scheduled"
         receivables.append({
             "receivable_id": f"REC-{i:04d}",
             "retailer_id": rng.choice(retailers)["retailer_id"],
@@ -116,7 +124,7 @@ def generate_scheduled_receivables(num_rows: int, retailers: list[dict], rng: ra
             "currency": "INR",
             "issue_date": issue_date.isoformat(),
             "due_date": due_date.isoformat(),
-            "status": rng.choice(statuses),
+            "status": status, 
             "state_version": state_version,
             "source_type": "synthetic",
         })
@@ -132,14 +140,23 @@ def generate_retailer_complaints(num_rows: int, retailers: list[dict], products:
         r = rng.choice(retailers)
         p = rng.choice(products)
         logged_date = base_date - timedelta(days=rng.randint(1, 45))
+        status = rng.choice(statuses)
+        if status in {"open", "investigating"}:
+            resolution_notes = "Pending review"
+        else:
+            resolution_notes = rng.choice([
+                "Resolved via credit note",
+                "Resolved after replacement shipment",
+                "Closed after retailer confirmation",
+            ])
         complaints.append({
             "complaint_id": f"CMP-{i:03d}",
             "retailer_id": r["retailer_id"],
             "sku_id": p["sku_id"],
             "complaint_date": logged_date.isoformat(),
             "category": rng.choice(categories),
-            "status": rng.choice(statuses),
-            "resolution_notes": "Pending review or verified with supplier" if rng.random() > 0.5 else "Resolved via credit note",
+            "status": status,
+            "resolution_notes": resolution_notes,
             "state_version": state_version,
             "source_type": "synthetic"
         })
