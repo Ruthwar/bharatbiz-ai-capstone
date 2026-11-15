@@ -283,13 +283,25 @@ def render_processing_result(result: dict | None) -> None:
             go_to("Decision desk")
 
 
-def render_inbox(parties: list[dict]) -> None:
+def _load_inbox_example(example: dict, sender_label: str) -> None:
+    message = example["message"]
+    st.session_state.inbox_sender = sender_label
+    st.session_state.inbox_language = message["language"]
+    st.session_state.inbox_conversation = f"demo-{example['scenario_id'].lower()}"
+    st.session_state.message_draft = message["text"]
+    st.session_state.last_result = None
+    st.session_state.chat = []
+
+
+def render_inbox(parties: list[dict], scenarios: list[dict]) -> None:
     page_header(
         "Channel workspace",
         "Message inbox",
         "Simulate a supplier or retailer update, inspect the extracted evidence, and send the resulting case to review.",
         "Demo channel · identity is selected, not authenticated",
     )
+    examples = {row["scenario_id"]: row for row in scenarios if row.get("message")}
+    sender_labels = {}
     with st.container(border=True):
         section_title("Intake controls", "A production channel would derive the sender from the authenticated account.")
         sender_column, language_column, conversation_column = st.columns([2, 1, 1.4])
@@ -298,24 +310,78 @@ def render_inbox(parties: list[dict]) -> None:
                 f"{party['party_name']} · {party['party_type']} · {party['party_id']}": party
                 for party in parties
             }
-            sender = labels[sender_column.selectbox("Sender", list(labels))]
+            sender_labels = {
+                (party["party_type"], party["party_id"]): label
+                for label, party in labels.items()
+            }
+            for scenario_id, example in examples.items():
+                message = example["message"]
+                key = (message["sender_type"], message["sender_id"])
+                if key not in sender_labels:
+                    party_name = f"{scenario_id} field reporter" if key[1] else "Synthetic planning desk"
+                    label = f"{party_name} · {key[0]} · {key[1] or 'no reporter ID'}"
+                    labels[label] = {
+                        "party_name": party_name,
+                        "party_type": key[0],
+                        "party_id": key[1],
+                    }
+                    sender_labels[key] = label
+            sender = labels[sender_column.selectbox("Sender", list(labels), key="inbox_sender")]
             sender_type, sender_id = sender["party_type"], sender["party_id"]
         else:
             sender_type = sender_column.selectbox("Sender type", ["retailer", "supplier", "sales_rep", "unknown"])
             sender_id = sender_column.text_input("Sender account ID", "SUP-005")
-        language = language_column.selectbox("Language", ["English", "Hinglish", "Hindi"])
-        conversation_id = conversation_column.text_input("Conversation ID", "demo-conversation-1")
+        language = language_column.selectbox("Language", ["English", "Hinglish", "Hindi"], key="inbox_language")
+        conversation_id = conversation_column.text_input("Conversation ID", "demo-conversation-1", key="inbox_conversation")
+
+        if examples:
+            st.divider()
+            section_title(
+                "Demo examples",
+                "Load an editable intake message, or run the complete fixture to inspect its canonical decision.",
+            )
+            selected_example_id = st.selectbox(
+                "Example scenario",
+                list(examples),
+                key="inbox_example",
+                format_func=lambda scenario_id: f"{scenario_id} · {examples[scenario_id]['name']}",
+            )
+            example = examples[selected_example_id]
+            st.write(example["description"])
+            st.caption(f"Expected full-scenario decision: {example['demo_outcome']}")
+            load_column, run_column = st.columns(2)
+            message = example["message"]
+            load_column.button(
+                "Load editable example",
+                key=f"load-inbox-{selected_example_id}",
+                on_click=_load_inbox_example,
+                args=(example, sender_labels.get((message["sender_type"], message["sender_id"]), "")),
+                disabled=not parties,
+                width="stretch",
+            )
+            if run_column.button(
+                "Run full scenario",
+                key=f"run-inbox-{selected_example_id}",
+                type="primary",
+                width="stretch",
+            ):
+                try:
+                    result = post(f"/api/v1/scenarios/{selected_example_id}/run", {"persist_review": False})
+                except urllib.error.HTTPError as exc:
+                    st.error(f"API returned {exc.code}: {exc.read().decode('utf-8')}")
+                except urllib.error.URLError as exc:
+                    st.error(f"Cannot reach the API at {API_URL}: {exc.reason}")
+                else:
+                    st.session_state.scenario_result = result
+                    st.session_state.scenario_result_id = selected_example_id
+                    st.session_state.scenario_selector = selected_example_id
+                    go_to("Scenario lab")
+            st.caption("Editable intake processes only the visible message. Run full scenario to include all fixture overlays and assumptions.")
 
     left, right = st.columns([1.15, 1])
     with left:
         with st.container(border=True):
             section_title("Sandbox conversation", "Only receipt and completion acknowledgements are automated.")
-            if st.button("Load supplier-delay example"):
-                fixture = json.loads(
-                    (PROJECT_ROOT / "data" / "synthetic" / "scenario_fixtures" / "SCN-003.json").read_text(encoding="utf-8")
-                )
-                st.session_state.message_draft = fixture["message"]["text"]
-                st.rerun()
             history = st.session_state.setdefault("chat", [])
             for entry in history:
                 with st.chat_message(entry["role"]):
@@ -376,6 +442,7 @@ def render_scenario_lab(scenarios: list[dict]) -> None:
     selected_id = st.selectbox(
         "Scenario",
         list(by_id),
+        key="scenario_selector",
         format_func=lambda scenario_id: f"{scenario_id} · {by_id[scenario_id]['name']}",
     )
     selected = by_id[selected_id]
@@ -798,7 +865,7 @@ with st.sidebar:
 if page == "Overview":
     render_overview(state, review_items, stock_rows, open_order_rows)
 elif page == "Inbox":
-    render_inbox(parties)
+    render_inbox(parties, scenarios)
 elif page == "Scenario lab":
     render_scenario_lab(scenarios)
 elif page == "Decision desk":
