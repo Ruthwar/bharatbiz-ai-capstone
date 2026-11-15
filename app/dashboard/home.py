@@ -98,7 +98,7 @@ columns = st.columns(5)
 columns[0].metric("On hand", f"{inventory['on_hand_units']} {inventory['unit']}")
 columns[1].metric("Reserved", f"{inventory['reserved_units']} {inventory['unit']}")
 columns[2].metric("Delayed incoming", f"{inventory['delayed_incoming_units']} {inventory['unit']}")
-columns[3].metric("Available before delay", f"{inventory['available_before_delay_units']} {inventory['unit']}")
+columns[3].metric("ATP (before delay)", f"{inventory['atp_units']} {inventory['unit']}")
 columns[4].metric("Immediately usable", f"{inventory['immediately_available_units']} {inventory['unit']}")
 st.write(f"**{orders['affected_order_count']} affected orders · {orders['total_requested_units']} {orders['unit']} requested**")
 st.dataframe(
