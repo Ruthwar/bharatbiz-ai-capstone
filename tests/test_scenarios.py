@@ -17,7 +17,7 @@ OPERATIONAL_IDS = ("SCN-001", "SCN-002", "SCN-003", "SCN-004", "SCN-005", "SCN-0
 
 def test_scenario_registry_is_complete_and_valid(state):
     fixtures = list_scenarios()
-    assert [fixture.scenario_id for fixture in fixtures] == [f"SCN-{index:03d}" for index in range(1, 10)]
+    assert [fixture.scenario_id for fixture in fixtures] == [f"SCN-{index:03d}" for index in range(1, 11)]
     for fixture in fixtures:
         validate_scenario(fixture, state)
 
@@ -181,3 +181,32 @@ def test_cash_projection_rejects_tampered_daily_schedule(state):
     )
     assert not verification.valid
     assert "cash_schedule_mismatch" in verification.violations
+
+
+def test_scn010_is_infeasible_and_not_submitted_for_approval():
+    ledger = SqliteLedger(":memory:")
+    result = run_scenario("SCN-010", persist=True, ledger=ledger)
+    assert ledger.pending_reviews() == []
+    negotiation = result["negotiation"]
+
+    assert result["selected_plan"] is None
+    assert result["verification"] is None
+    assert result["recommendation"]["review_status"] == "infeasible"
+    assert result["event"]["status"] == "infeasible"
+    assert "not_submitted_for_approval" in result["trace"]
+    assert negotiation["status"] == "infeasible"
+    assert negotiation["planners_agree"] is True
+    assert negotiation["ortools_status"] == "INFEASIBLE"
+    assert negotiation["infeasibility_reasons"] == [
+        "stock-only: cash_buffer_breached",
+        "supplier-SUP-002: cash_buffer_breached",
+        "supplier-SUP-003: cash_buffer_breached",
+        "supplier-SUP-005: cash_buffer_breached",
+    ]
+
+
+def test_operational_planners_agree():
+    for scenario_id in (*OPERATIONAL_IDS, "SCN-010"):
+        negotiation = run_scenario(scenario_id)["negotiation"]
+        assert negotiation["planners_agree"] is True
+        assert negotiation["deterministic_candidate_id"] == negotiation["ortools_candidate_id"]

@@ -49,9 +49,9 @@ def test_scenario_catalogue_and_non_plan_execution():
     catalogue = client.get("/api/v1/scenarios")
     assert catalogue.status_code == 200
     rows = catalogue.json()
-    assert [row["scenario_id"] for row in rows] == [f"SCN-{index:03d}" for index in range(1, 10)]
+    assert [row["scenario_id"] for row in rows] == [f"SCN-{index:03d}" for index in range(1, 11)]
     assert all(row["demo_outcome"] for row in rows)
-    assert len({row["message"]["text"] for row in rows}) == 9
+    assert len({row["message"]["text"] for row in rows}) == 10
     assert rows[2]["message"] == {
         "text": "Sri Venkateswara FMCG Supply reports a two-day delay for Cooking oil 1 L pouch; revised date is not confirmed.",
         "language": "English",

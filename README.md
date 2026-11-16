@@ -22,7 +22,7 @@ Open `/docs` for the API. The starter workflow is deterministic mock mode and re
 
 ## Scenario suite
 
-Nine explicit fixtures run through one scenario registry and immutable overlay contract. Operational scenarios use the same deterministic allocator, candidate ranking, visible exclusions, dated cash schedules and independent verifier. Case and market scenarios produce reviewable evidence without inventing an allocation plan or operational action.
+Ten explicit fixtures run through one scenario registry and immutable overlay contract. Operational scenarios use the same deterministic allocator, candidate ranking, OR-Tools selector, visible exclusions, dated cash schedules and independent verifier. Case and market scenarios produce reviewable evidence without inventing an allocation plan or operational action.
 
 | Scenario | Focus | Expected review outcome |
 | --- | --- | --- |
@@ -35,6 +35,7 @@ Nine explicit fixtures run through one scenario registry and immutable overlay c
 | SCN-007 | Competitor observation | Deduplicated reports and distinct-reporter corroboration |
 | SCN-008 | Combined disruption | Composed demand, delay and cash overlays with counterfactual |
 | SCN-009 | Smaller-pack request | Aggregated unverified signal; no assortment change |
+| SCN-010 | Cash already below the buffer | No feasible plan; nothing submitted for approval |
 
 Run any scenario without a model key, or persist its review outcome in SQLite:
 
@@ -42,7 +43,10 @@ Run any scenario without a model key, or persist its review outcome in SQLite:
 python scripts\run_scenario.py --scenario SCN-003 --mode mock
 python scripts\run_scenario.py --scenario SCN-007 --mode mock --persist-review
 python scripts\evaluate_scenarios.py
+python scripts\compare_planners.py
 ```
+
+`compare_planners.py` runs deterministic ranking and the OR-Tools selector on the same operational fixtures. It fails if they choose different candidates, or if a fixture with no feasible candidate is still given a selected plan.
 
 The evaluator checks every fixture expectation and returns a nonzero exit code on any mismatch. The API exposes `GET /api/v1/scenarios` and `POST /api/v1/scenarios/{scenario_id}/run`; the run body accepts `{"persist_review": true}`.
 
@@ -75,7 +79,7 @@ streamlit run app\dashboard\chat.py
 
 The chat page has an intake tab and a review queue. Selecting a sender in the UI simulates channel identity; a real channel derives it from the authenticated account. Receipt and completion acknowledgements are the only automated outbound text. No action executes without human approval.
 
-**Demo examples** in Intake controls cover all nine fixtures. **Load editable example** fills the sender, language, conversation and message without submitting it, so the normal intake and clarification flow can be demonstrated. **Run full scenario** applies every fixture overlay and opens the canonical decision in Scenario lab without adding it to the review queue. Plain intake processes only the visible message; it does not reproduce scenario-only demand, cash, delay or stock overlays.
+**Demo examples** in Intake controls cover all ten fixtures. **Load editable example** fills the sender, language, conversation and message without submitting it, so the normal intake and clarification flow can be demonstrated. **Run full scenario** applies every fixture overlay and opens the canonical decision in Scenario lab without adding it to the review queue. Plain intake processes only the visible message; it does not reproduce scenario-only demand, cash, delay or stock overlays.
 
 Model extraction is optional. With `LLM_PROVIDER=none` (the default) the deterministic rules extractor is used. To enable a provider, copy `.env.example` to `.env` (the app loads it automatically) and set `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, and `LLM_CA_BUNDLE` if the endpoint uses a private CA. Verify the connection with `python scripts/check_llm.py`. Never commit `.env`; extraction output is validated against the schema, exact evidence spans and the product catalogue, and falls back to rules on failure.
 

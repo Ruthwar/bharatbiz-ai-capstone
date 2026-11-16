@@ -68,7 +68,7 @@ class BusinessEvent(BaseModel):
     inferences: dict[str, str | bool | None] = Field(default_factory=dict)
     uncertainties: list[str] = Field(default_factory=list)
     human_review_required: bool = True
-    status: Literal["pending_review", "needs_clarification", "verified"] = "pending_review"
+    status: Literal["pending_review", "needs_clarification", "verified", "infeasible"] = "pending_review"
     state_version: str
 
 
@@ -172,7 +172,7 @@ class Recommendation(BaseModel):
     evidence_refs: list[str] = Field(default_factory=list)
     assumptions: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
-    review_status: Literal["pending_review", "approved", "rejected", "needs_clarification"] = "pending_review"
+    review_status: Literal["pending_review", "approved", "rejected", "needs_clarification", "infeasible"] = "pending_review"
     human_approval_required: bool = True
 
 ## Addition for Inventory Items

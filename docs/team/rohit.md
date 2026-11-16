@@ -14,7 +14,7 @@ Review `suppliers.csv`, `supplier_products.csv` and `cash_ledger.csv`; state the
 
 ## Handoffs and done evidence
 
-Use inventory/order impacts from Saurabh/Rajesh and provide constraints to Ranjith’s optimizer/verifier; preserve evidence and unknown commitment dates through Ruthwar’s contracts. Done when MOQ, capacity, lead-time and cash checks are deterministic and traceable.
+Use inventory/order impacts from Saurabh/Rajesh and provide constraints to Ranjit’s optimizer/verifier; preserve evidence and unknown commitment dates through Ruthwar’s contracts. Done when MOQ, capacity, lead-time and cash checks are deterministic and traceable.
 
 ## Shared obligations
 

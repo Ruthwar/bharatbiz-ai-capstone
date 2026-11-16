@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+from decimal import Decimal
 from pathlib import Path
 
 from app.orchestration.workflow import process_message
@@ -23,6 +24,22 @@ def test_complete_supplier_delay_workflow(demo_message):
     assert result["selected_plan"]["candidate_id"] == "supplier-SUP-002"
     assert result["verification"] == {"valid": True, "violations": []}
     assert result["recommendation"]["review_status"] == "pending_review"
+
+
+def test_supplier_delay_below_cash_buffer_is_infeasible(demo_message, state, monkeypatch):
+    low_cash = state.model_copy(update={"cash_balance_rupees": Decimal("40000.00")})
+    monkeypatch.setattr("app.orchestration.workflow.load_business_state", lambda *args, **kwargs: low_cash)
+
+    result = process_message(demo_message)
+
+    assert result["selected_plan"] is None
+    assert result["verification"] is None
+    assert result["event"]["status"] == "infeasible"
+    assert result["recommendation"]["review_status"] == "infeasible"
+    assert "not_submitted_for_approval" in result["trace"]
+    reasons = {row["candidate_id"]: row["reasons"] for row in result["excluded_candidates"]}
+    assert reasons["stock-only"] == ["cash_buffer_breached"]
+    assert "cash_buffer_breached" in reasons["supplier-SUP-002"]
 
 
 def test_workflow_is_deterministic(demo_message):

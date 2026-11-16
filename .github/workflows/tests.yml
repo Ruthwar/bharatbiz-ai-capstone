@@ -23,3 +23,5 @@ jobs:
         run: python -m pytest -q
       - name: Evaluate all scenarios
         run: python scripts/evaluate_scenarios.py
+      - name: Compare deterministic ranking with OR-Tools
+        run: python scripts/compare_planners.py

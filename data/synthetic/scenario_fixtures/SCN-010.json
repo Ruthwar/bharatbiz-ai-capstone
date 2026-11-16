@@ -1,0 +1,43 @@
+{
+  "scenario_id": "SCN-010",
+  "name": "Cash already below the buffer",
+  "description": "Opening cash is below the minimum buffer, so stock-only and every supplier purchase are infeasible. No plan is submitted for approval.",
+  "target_sku_id": "SKU-003",
+  "message": {
+    "message_id": "DEMO-SCN-010-001",
+    "source_type": "synthetic",
+    "text": "Limited cash for Cooking oil 1 L pouch: opening cash is already below the minimum buffer, so procurement cannot be funded.",
+    "observed_at": "2026-11-01T09:00:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v2-seed-20261105",
+    "sender": {"party_type": "sales_rep", "channel": "api"}
+  },
+  "overlays": {
+    "opening_cash_rupees": "40000.00",
+    "planning_horizon": "2026-11-04",
+    "procurement_costs": "immediate_outflow"
+  },
+  "assumptions": {
+    "opening_cash_rupees": "40000.00",
+    "minimum_cash_buffer_rupees": "50000.00",
+    "planning_horizon": "2026-11-04",
+    "procurement_costs": "immediate_outflow"
+  },
+  "unknowns": ["next_retailer_receipt_date"],
+  "expected": {
+    "review_status": "infeasible",
+    "planning_status": "infeasible",
+    "creates_allocation_plan": false,
+    "verification_valid": null,
+    "planners_agree": true,
+    "ortools_status": "INFEASIBLE",
+    "ortools_candidate_id": null,
+    "infeasibility_reasons": [
+      "stock-only: cash_buffer_breached",
+      "supplier-SUP-002: cash_buffer_breached",
+      "supplier-SUP-003: cash_buffer_breached",
+      "supplier-SUP-005: cash_buffer_breached"
+    ]
+  }
+}

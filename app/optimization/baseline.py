@@ -92,36 +92,70 @@ def build_candidate_plans(
     immediate_available_units: int,
     supplier_options: list[SupplierOption],
     planning_horizon: date,
-) -> list[CandidatePlan]:
+) -> tuple[list[CandidatePlan], list[CandidateExclusion]]:
     orders = affected_orders(state, sku_id)
-    plans = [
-        _build_plan(
-            orders,
-            state.state_version,
-            sku_id,
-            immediate_available_units,
-            None,
-            planning_horizon,
-            project_cash(state),
+    stock_cash = project_cash(state)
+    stock_plan = _build_plan(
+        orders,
+        state.state_version,
+        sku_id,
+        immediate_available_units,
+        None,
+        planning_horizon,
+        stock_cash,
+    )
+    plans = []
+    exclusions = []
+    if stock_cash.feasible:
+        plans.append(stock_plan)
+    else:
+        exclusions.append(
+            CandidateExclusion(
+                candidate_id="stock-only",
+                reasons=["cash_buffer_breached"],
+                details={
+                    "ending_cash_rupees": str(stock_cash.ending_cash_rupees),
+                    "minimum_buffer_rupees": str(stock_cash.minimum_buffer_rupees),
+                },
+            )
         )
-    ]
     for option in supplier_options:
+        candidate_id = f"supplier-{option.supplier_id}"
         if not option.feasible:
-            continue
-        projection = project_cash(state, option.total_cost_rupees)
-        if projection.feasible:
-            plans.append(
-                _build_plan(
-                    orders,
-                    state.state_version,
-                    sku_id,
-                    immediate_available_units,
-                    option,
-                    planning_horizon,
-                    projection,
+            exclusions.append(
+                CandidateExclusion(
+                    candidate_id=candidate_id,
+                    supplier_id=option.supplier_id,
+                    reasons=list(option.reasons),
                 )
             )
-    return plans
+            continue
+        projection = project_cash(state, option.total_cost_rupees)
+        if not projection.feasible:
+            exclusions.append(
+                CandidateExclusion(
+                    candidate_id=candidate_id,
+                    supplier_id=option.supplier_id,
+                    reasons=["cash_buffer_breached"],
+                    details={
+                        "ending_cash_rupees": str(projection.ending_cash_rupees),
+                        "minimum_buffer_rupees": str(projection.minimum_buffer_rupees),
+                    },
+                )
+            )
+            continue
+        plans.append(
+            _build_plan(
+                orders,
+                state.state_version,
+                sku_id,
+                immediate_available_units,
+                option,
+                planning_horizon,
+                projection,
+            )
+        )
+    return plans, exclusions
 
 
 def build_view_candidate_plans(
@@ -140,18 +174,31 @@ def build_view_candidate_plans(
             receipt_timing,
         )
 
-    plans = [
-        _build_plan(
-            view.orders,
-            view.state.state_version,
-            view.sku_id,
-            view.immediate_available_units,
-            None,
-            view.planning_horizon,
-            projection(Decimal("0.00")),
-        )
-    ]
+    stock_cash = projection(Decimal("0.00"))
+    stock_plan = _build_plan(
+        view.orders,
+        view.state.state_version,
+        view.sku_id,
+        view.immediate_available_units,
+        None,
+        view.planning_horizon,
+        stock_cash,
+    )
+    plans = []
     exclusions = []
+    if stock_cash.feasible:
+        plans.append(stock_plan)
+    else:
+        exclusions.append(
+            CandidateExclusion(
+                candidate_id="stock-only",
+                reasons=["cash_buffer_breached"],
+                details={
+                    "ending_cash_rupees": str(stock_cash.ending_cash_rupees),
+                    "minimum_buffer_rupees": str(stock_cash.minimum_buffer_rupees),
+                },
+            )
+        )
     for option in supplier_options:
         candidate_id = f"supplier-{option.supplier_id}"
         if not option.feasible:
@@ -191,18 +238,19 @@ def build_view_candidate_plans(
     return plans, exclusions
 
 
+def rank_key(plan: CandidatePlan) -> tuple:
+    """Published objective: unmet, then late, then arrival, then cost in paise, then id.
+
+    A stock-only plan has no arrival date, so it sorts after every dated supplier arrival.
+    Cost is integer paise so this key matches the OR-Tools model exactly.
+    """
+    option = plan.supplier_option
+    arrival = option.scenario_arrival_date.toordinal() if option else date.max.toordinal()
+    cost_paise = int((plan.total_cost_rupees * 100).to_integral_value())
+    return (plan.unmet_units, plan.late_units, arrival, cost_paise, plan.candidate_id)
+
+
 def select_best_plan(plans: list[CandidatePlan]) -> CandidatePlan:
     if not plans:
         raise ValueError("No candidate plans are available")
-
-    def rank(plan: CandidatePlan) -> tuple:
-        option = plan.supplier_option
-        return (
-            plan.unmet_units,
-            plan.late_units,
-            option.scenario_arrival_date if option else date.max,
-            plan.total_cost_rupees,
-            plan.candidate_id,
-        )
-
-    return min(plans, key=rank)
+    return min(plans, key=rank_key)

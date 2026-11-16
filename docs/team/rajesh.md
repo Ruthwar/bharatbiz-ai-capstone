@@ -14,7 +14,7 @@ Review `open_orders.csv` and `messages.jsonl`; agree order input/output fields a
 
 ## Handoffs and done evidence
 
-Consume stock from Saurabh; share affected-order quantities with Rohit and Ranjith; use event contracts from Ruthwar/Varsha. Done when allocation never exceeds stock and each text-derived claim links to its source span.
+Consume stock from Saurabh; share affected-order quantities with Rohit and Ranjit; use event contracts from Ruthwar/Varsha. Done when allocation never exceeds stock and each text-derived claim links to its source span.
 
 ## Shared obligations
 

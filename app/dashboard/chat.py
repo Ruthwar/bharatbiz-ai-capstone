@@ -543,7 +543,9 @@ def render_review_actions(item: dict, context: dict | None) -> None:
             "Approve plan" if operational else "Mark reviewed",
             type="primary",
             key=f"approve-{selected_id}",
-            disabled=planned and context.get("verification_valid") is False,
+            disabled=planned and (
+                context.get("verification_valid") is False or context.get("planning_status") == "infeasible"
+            ),
             width="stretch",
         ):
             post(f"/api/v1/review/{selected_id}", {"decision": "approve", "reviewer": reviewer})
@@ -618,6 +620,17 @@ def render_decision_desk(review_items: list[dict]) -> None:
                     render_case(context)
                 else:
                     render_market_signal(context)
+            with evidence_tab:
+                render_evidence(context)
+            with policies_tab:
+                render_policies(context)
+            render_review_actions(item, context)
+            return
+        if context.get("planning_status") == "infeasible":
+            st.error("This case has no feasible plan. Approval is unavailable.")
+            decision_tab, evidence_tab, policies_tab = st.tabs(["Decision", "Evidence & unknowns", "Policy basis"])
+            with decision_tab:
+                render_decision(context)
             with evidence_tab:
                 render_evidence(context)
             with policies_tab:
