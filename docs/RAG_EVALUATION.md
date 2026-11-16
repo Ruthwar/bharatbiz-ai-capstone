@@ -16,7 +16,7 @@ A high retrieval score with a citation that does not justify the card would fail
 
 | Item | Value |
 | --- | --- |
-| Corpus | 30 documents, 186 sections, 88.6 KiB |
+| Corpus | 30 documents, 186 sections, 89.1 KiB |
 | Index | SQLite FTS5, BM25, porter + unicode61 |
 | Ranking | best section per document; sections must cover at least 35% of query content words |
 | Query construction | per-intent template plus extracted fact values; top 3 documents shown on the card |
@@ -28,22 +28,24 @@ Labels were not tuned to the ranking. Where a question is genuinely answered by 
 
 ## 3. Results
 
-Measured 2026-11-15 on the expanded corpus:
+Measured 2026-11-16 on the expanded corpus:
 
 | Metric | BM25 (shipped) | Term-frequency baseline |
 | --- | --- | --- |
 | primary@1 | **77.5%** | 62.5% |
-| recall@3 | **100.0%** | 90.0% |
+| recall@3 | **100.0%** | 92.5% |
 | recall@5 | **100.0%** | — |
-| MRR | **0.855** | 0.768 |
-| latency p50 | **1.1 ms** warm, 3.4 ms cold | — |
-| latency p95 | **2.0 ms** warm, 5.4 ms cold | — |
+| MRR | **0.855** | 0.767 |
+| latency p50 | **1.3 ms** in this validation run | — |
+| latency p95 | **1.9 ms** in this validation run | — |
 
-The baseline is the obvious alternative: count query words in the whole document and sort. BM25 remains stronger on the expanded corpus. The original 30-query slice retains 100% recall@3 and remains above the repository's primary@1 and MRR test floors; the absolute primary@1 change reflects the additional, intentionally overlapping policy/SOP documents.
+The baseline is the obvious alternative: count query words in the whole document and sort. BM25 remains stronger on the expanded corpus. The original 30-query slice retains 100% recall@3 and remains above the repository's primary@1 and MRR test floors; the absolute primary@1 change reflects the additional, intentionally overlapping policy/SOP documents. Latency is hardware- and load-dependent; run `python scripts/eval_rag.py` for a local measurement.
 
 ### Ablation: the coverage filter
 
 Before adding the 35% coverage requirement, a short case-note section could outrank a policy on one incidental word. GQ-12 ("maximum number of follow-up questions before human triage") ranked the SOP second behind a case note that happened to contain "following week".
+
+This historical ablation used the original 30-query set, not the expanded 40-query evaluation reported above.
 
 | | primary@1 | MRR | GQ-12 rank |
 | --- | --- | --- | --- |
@@ -115,11 +117,11 @@ Neither is needed for the demo. Both are recorded here so the limitation is a kn
 
 ## 6. Cost
 
-88.6 KiB, 30 files, one SQLite table, no embedding model, no network call, sub-2 ms warm-query latency in this run, same answer every time. The corpus remains small enough for a deterministic lexical index and checkable citations.
+89.1 KiB, 30 files, one SQLite table, no embedding model and no network call. The same index and query produce deterministic rankings with millisecond-scale local latency. The corpus remains small enough for a deterministic lexical index and checkable citations.
 
 ## 7. Next, if the corpus grows
 
 1. Add a document-level score so a rule spread across sections outranks a one-line mention.
 2. Add embeddings for Hinglish and Hindi message text (`bge-m3` or `multilingual-e5`), keeping BM25 as the exact-term channel.
 3. Add a retrieval-quality gate per intent: if the top score is below a calibrated floor, show "no policy matched" rather than a weak citation. The current card already distinguishes the two, but the floor is not calibrated.
-4. Have a domain reviewer label 50 real questions. Thirty self-written queries prove the pipeline works; they do not prove it covers what a distributor's staff actually asks.
+4. Have a domain reviewer label 50 real questions. Forty self-written queries prove the pipeline works; they do not prove it covers what a distributor's staff actually asks.

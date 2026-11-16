@@ -124,7 +124,7 @@ def generate_scheduled_receivables(num_rows: int, retailers: list[dict], rng: ra
             "currency": "INR",
             "issue_date": issue_date.isoformat(),
             "due_date": due_date.isoformat(),
-            "status": status, 
+            "status": status,
             "state_version": state_version,
             "source_type": "synthetic",
         })
