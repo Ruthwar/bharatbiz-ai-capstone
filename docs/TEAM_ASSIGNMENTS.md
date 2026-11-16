@@ -9,7 +9,7 @@ This separate assignment set maps each person to one primary ownership area from
 | Rajesh | Retailer orders, fulfilment and sales/market intelligence | Confirm allocation input/output and one complaint or market-signal case |
 | Rohit | Supplier agent and cash-flow analysis | Confirm supplier terms/cash units and one supplier-delay feasibility case |
 | Varsha | RAG, data collection and dataset quality | Review regenerated pack, labels, provenance and pilot permission workflow |
-| Ranjith | Planning, optimization, verification, dashboard and evaluation | Define baseline objective/constraints and a verifiable demo output |
+| Ranjit | Planning, optimization, verification, dashboard and evaluation | Define baseline objective/constraints and a verifiable demo output |
 
 ## Shared commitments
 

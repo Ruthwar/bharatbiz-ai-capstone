@@ -1,4 +1,4 @@
-# Ranjith — Planning, optimization, verification, dashboard and evaluation
+# Ranjit — Planning, optimization, verification, dashboard and evaluation
 
 **Master-plan role:** Member 6. Capstone-only scope.
 

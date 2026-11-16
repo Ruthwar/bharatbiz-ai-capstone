@@ -78,7 +78,8 @@ def build_review_context(result: dict) -> dict | None:
         }
 
     selected = result.get("selected_plan")
-    if not selected:
+    negotiation = result.get("negotiation") or {}
+    if not selected and negotiation.get("status") != "infeasible":
         return None
 
     agents = {
@@ -89,6 +90,36 @@ def build_review_context(result: dict) -> dict | None:
 
     requested = orders.get("total_requested_units", 0)
     usable = inventory.get("immediately_available_units", 0)
+
+    comparison = {
+        "deterministic_candidate_id": negotiation.get("deterministic_candidate_id"),
+        "ortools_candidate_id": negotiation.get("ortools_candidate_id"),
+        "planners_agree": negotiation.get("planners_agree"),
+        "ortools_status": negotiation.get("ortools_status"),
+        "objective": negotiation.get("objective", ""),
+        "tradeoffs": negotiation.get("tradeoffs", []),
+        "constraint_checks": negotiation.get("constraint_checks", []),
+    }
+    if not selected:
+        return {
+            **shared,
+            "planning_status": "infeasible",
+            "unit": inventory.get("unit", "unit"),
+            "order_count": orders.get("affected_order_count", 0),
+            "requested_units": requested,
+            "usable_units": usable,
+            "required_units": max(requested - usable, 0),
+            "alternatives": [],
+            "excluded_candidates": result.get("excluded_candidates", []),
+            "infeasibility_reasons": negotiation.get("infeasibility_reasons", []),
+            "planner_comparison": comparison,
+            "counterfactuals": result.get("counterfactuals", []),
+            "scenario_view": result.get("scenario_view"),
+            "verification_valid": False,
+            "verification_violations": [],
+            "allocations": [],
+            "cash_schedule": [],
+        }
 
     alternatives = []
     for plan in result.get("candidate_plans") or []:
@@ -117,6 +148,8 @@ def build_review_context(result: dict) -> dict | None:
 
     return {
         **shared,
+        "planning_status": "feasible",
+        "planner_comparison": comparison,
         "unit": inventory.get("unit", "unit"),
         "order_count": orders.get("affected_order_count", 0),
         "requested_units": requested,

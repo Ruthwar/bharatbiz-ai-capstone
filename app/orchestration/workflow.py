@@ -13,7 +13,8 @@ from app.extraction import configured_extractor, validate_extraction
 from app.extraction.base import Extraction
 from app.extraction.llm import ExtractionError
 from app.extraction.rules import RulesExtractor
-from app.optimization.baseline import build_candidate_plans, select_best_plan
+from app.optimization.baseline import build_candidate_plans
+from app.optimization.negotiation import negotiate
 from app.orchestration import router
 from app.orchestration.taxonomy import TAXONOMY_VERSION, UNCLASSIFIED
 from app.scenarios.cases import run_case_scenario
@@ -224,52 +225,71 @@ def _process_supplier_delay(
         delay_days,
         planning_horizon,
     )
-    candidates = build_candidate_plans(
+    candidates, exclusions = build_candidate_plans(
         state,
         sku_id,
         inventory.proposal["immediately_available_units"],
         supplier_options,
         planning_horizon,
     )
-    selected = select_best_plan(candidates)
-    verification = verify_plan(state, selected, inventory.proposal["immediately_available_units"])
+    agreement = negotiate(candidates, exclusions)
+    selected = agreement.selected
+    verification = (
+        verify_plan(state, selected, inventory.proposal["immediately_available_units"])
+        if selected is not None
+        else None
+    )
 
     assumptions = inventory.assumptions + [
         "Scenario arrival dates are planning estimates, not supplier-confirmed commitments.",
         "Candidate procurement costs are immediate outflows with no additional inflows assumed.",
     ]
     warnings = []
-    if selected.late_units:
-        warnings.append(f"{selected.late_units} {unit} units remain late in the selected plan.")
-    if selected.unmet_units:
-        warnings.append(f"{selected.unmet_units} {unit} units remain unmet in the selected plan.")
-    if not verification.valid:
-        warnings.extend(verification.violations)
-
-    if selected.supplier_option:
-        option = selected.supplier_option
-        option_label = (
-            f"{option.supplier_name} ({option.supplier_id})" if option.supplier_name else option.supplier_id
-        )
+    if not agreement.planners_agree:
+        warnings.append("Deterministic ranking and OR-Tools selected different candidates.")
+    if selected is None:
+        event.status = "infeasible"
+        warnings.extend(agreement.infeasibility_reasons)
         summary = (
-            f"Recommended scenario option: {option.quantity_units} {unit} units from "
-            f"{option_label}; {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
-            f"{selected.late_units} late, {selected.unmet_units} unmet. Awaiting human review."
+            "No feasible plan. "
+            + "; ".join(agreement.infeasibility_reasons)
+            + ". Nothing is submitted for approval."
         )
+        review_status = "infeasible"
+        recommendation_key = "infeasible"
     else:
-        summary = (
-            f"Use available stock: {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
-            f"{selected.late_units} late, {selected.unmet_units} unmet. Awaiting human review."
-        )
+        if selected.late_units:
+            warnings.append(f"{selected.late_units} {unit} units remain late in the selected plan.")
+        if selected.unmet_units:
+            warnings.append(f"{selected.unmet_units} {unit} units remain unmet in the selected plan.")
+        if verification is not None and not verification.valid:
+            warnings.extend(verification.violations)
+        if selected.supplier_option:
+            option = selected.supplier_option
+            option_label = (
+                f"{option.supplier_name} ({option.supplier_id})" if option.supplier_name else option.supplier_id
+            )
+            summary = (
+                f"Recommended scenario option: {option.quantity_units} {unit} units from "
+                f"{option_label}; {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
+                f"{selected.late_units} late, {selected.unmet_units} unmet. Awaiting human review."
+            )
+        else:
+            summary = (
+                f"Use available stock: {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
+                f"{selected.late_units} late, {selected.unmet_units} unmet. Awaiting human review."
+            )
+        review_status = "pending_review" if verification is not None and verification.valid else "needs_clarification"
+        recommendation_key = selected.candidate_id
 
     recommendation = Recommendation(
-        recommendation_id=_stable_id("rec", event.event_id, selected.candidate_id),
+        recommendation_id=_stable_id("rec", event.event_id, recommendation_key),
         state_version=state.state_version,
         summary=summary,
         evidence_refs=[message.message_id, state.state_version],
         assumptions=assumptions,
         warnings=warnings,
-        review_status="pending_review" if verification.valid else "needs_clarification",
+        review_status=review_status,
     )
     return {
         "message": message.model_dump(mode="json"),
@@ -277,8 +297,10 @@ def _process_supplier_delay(
         "agent_results": [inventory.model_dump(mode="json"), orders.model_dump(mode="json")],
         "supplier_options": [option.model_dump(mode="json") for option in supplier_options],
         "candidate_plans": [plan.model_dump(mode="json") for plan in candidates],
-        "selected_plan": selected.model_dump(mode="json"),
-        "verification": verification.model_dump(mode="json"),
+        "excluded_candidates": [exclusion.model_dump(mode="json") for exclusion in exclusions],
+        "negotiation": agreement.as_dict(),
+        "selected_plan": selected.model_dump(mode="json") if selected is not None else None,
+        "verification": verification.model_dump(mode="json") if verification is not None else None,
         "recommendation": recommendation.model_dump(mode="json"),
         "trace": [
             "received",
@@ -286,8 +308,12 @@ def _process_supplier_delay(
             "event_extracted",
             "specialists_completed",
             "candidates_optimized",
-            "independently_verified",
-            "pending_human_review",
+            "infeasible" if selected is None else "independently_verified",
+            "not_submitted_for_approval"
+            if selected is None
+            else "pending_human_review"
+            if verification is not None and verification.valid
+            else "verification_failed",
         ],
         "mode": extraction.mode,
     }

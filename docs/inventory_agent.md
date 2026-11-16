@@ -46,7 +46,7 @@ Optional fields (warned about when absent):
 ## Handoffs
 - **Rajesh (orders):** use `atp_units` and `immediately_available_units` to size allocations; `shortage_units` triggers reallocation.
 - **Rohit (supplier):** use `immediate_shortage_units` and `reorder_required` to size time-sensitive purchase proposals when supply is delayed. Use `shortage_units` for long-term ATP gaps. Incoming delay is passed in via `delayed_incoming_units`.
-- **Ranjith (optimization/verification):** verify `on_hand − reserved + incoming == atp` and `shortage_units >= 0`.
+- **Ranjit (optimization/verification):** verify `on_hand − reserved + incoming == atp` and `shortage_units >= 0`.
 - **Ruthwar (contracts/orchestration):** every result carries `state_version`; stale versions must be rejected upstream. `ValueError` from this agent should be caught and routed to triage/ABSTAIN.
 
 ## Demo

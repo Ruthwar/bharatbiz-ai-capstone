@@ -7,6 +7,20 @@ from app.scenarios.contracts import ScenarioOverlays
 from app.schemas.contracts import BusinessState, CandidatePlan, VerificationResult
 
 
+def verify_inventory_identity(on_hand: int, reserved: int, incoming: int, atp: int, shortage: int) -> list[str]:
+    """Check the inventory handoff before a plan is allowed to use those quantities."""
+    violations = []
+    if on_hand - reserved + incoming != atp:
+        violations.append("atp_identity_failed")
+    if atp < 0:
+        violations.append("negative_atp")
+    if shortage < 0:
+        violations.append("negative_shortage")
+    if reserved > on_hand:
+        violations.append("reserved_exceeds_on_hand")
+    return violations
+
+
 def verify_cash(ending_cash_rupees: Decimal, minimum_buffer_rupees: Decimal) -> list[str]:
     return [] if ending_cash_rupees >= minimum_buffer_rupees else ["minimum_cash_buffer_breached"]
 

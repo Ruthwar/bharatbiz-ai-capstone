@@ -16,6 +16,7 @@ DEMO_OUTCOMES = {
     "SCN-007": "Two reports from two distinct reporters; corroborated but unverified, with no automatic competitive action.",
     "SCN-008": "Stock-only: 56/166 litre units fulfilled and 110 unmet; on-time-receipt counterfactual selects SUP-005.",
     "SCN-009": "Nine reported requests from three retailers; no catalogue match and no assortment change.",
+    "SCN-010": "No feasible plan: opening cash is below the buffer, so stock-only and every supplier purchase are excluded.",
 }
 
 

@@ -14,7 +14,7 @@ Review `data/synthetic/products.csv` and `inventory.csv`; propose the input/outp
 
 ## Handoffs and done evidence
 
-Share available-to-promise by SKU with Rajesh and Ranjith; supplier incoming stock with Rohit; report source/state version through Ruthwar’s contract. Done when shortage/reorder outputs are reproducible and no negative availability is silently accepted.
+Share available-to-promise by SKU with Rajesh and Ranjit; supplier incoming stock with Rohit; report source/state version through Ruthwar’s contract. Done when shortage/reorder outputs are reproducible and no negative availability is silently accepted.
 
 ## Shared obligations
 

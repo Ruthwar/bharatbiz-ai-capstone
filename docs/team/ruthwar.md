@@ -14,7 +14,7 @@ Lead the scope and scenario decision, publish the contract draft, assign interfa
 
 ## Handoffs and done evidence
 
-Agree inventory/order/supplier outputs with Saurabh, Rajesh and Rohit; give Ranjith workflow outputs for optimization/dashboard; agree message evidence and uncertainty with Varsha. Done when a deterministic request traverses the shared workflow, invalid output/failure is represented safely, and another member can run it from the README.
+Agree inventory/order/supplier outputs with Saurabh, Rajesh and Rohit; give Ranjit workflow outputs for optimization/dashboard; agree message evidence and uncertainty with Varsha. Done when a deterministic request traverses the shared workflow, invalid output/failure is represented safely, and another member can run it from the README.
 
 ## Shared obligations
 

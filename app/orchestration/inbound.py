@@ -169,11 +169,15 @@ def _slot_gate(flow: InboundState) -> dict:
     ).model_dump(mode="json")
     payload["result"] = result
 
+    review_status = recommendation.get("review_status")
     return {
         "payload": payload,
         "routed_action": routed_action,
-        "queue": routed_action == "human_triage"
-        or recommendation.get("review_status") == "pending_review",
+        "queue": review_status != "infeasible"
+        and (
+            routed_action == "human_triage"
+            or review_status == "pending_review"
+        ),
     }
 
 

@@ -56,7 +56,40 @@ def _trade_offs(context: dict) -> list[str]:
     return [text for _, text in sorted(lines)]
 
 
+def _render_infeasible(context: dict) -> None:
+    section_title("No feasible plan", "Hard constraints left nothing that can be submitted for approval.")
+    reasons = context.get("infeasibility_reasons") or ["No candidate satisfied the hard constraints."]
+    st.error("Infeasible: " + "; ".join(reasons))
+    comparison = context.get("planner_comparison") or {}
+    if comparison:
+        agreement = "agree" if comparison.get("planners_agree") else "disagree"
+        st.caption(
+            f"Deterministic ranking and OR-Tools {agreement}. "
+            f"OR-Tools status: {comparison.get('ortools_status') or 'unknown'}."
+        )
+    for line in comparison.get("constraint_checks") or []:
+        st.write(f"- {line}")
+    exclusions = context.get("excluded_candidates") or []
+    if exclusions:
+        st.dataframe(
+            [
+                {
+                    "Candidate": row["candidate_id"],
+                    "Supplier": row.get("supplier_id") or "—",
+                    "Reasons": ", ".join(row["reasons"]),
+                    "Details": "; ".join(f"{key}={value}" for key, value in row.get("details", {}).items()),
+                }
+                for row in exclusions
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+
+
 def render_decision(context: dict) -> None:
+    if context.get("planning_status") == "infeasible":
+        _render_infeasible(context)
+        return
     unit = context["unit"]
     arrival = context.get("selected_arrival_date")
     section_title("Plan comparison", "Every feasible candidate remains visible; excluded plans never enter ranking.")
@@ -84,6 +117,19 @@ def render_decision(context: dict) -> None:
         hide_index=True,
     )
     st.caption(RANKING_RULE)
+    comparison = context.get("planner_comparison") or {}
+    if comparison.get("ortools_status"):
+        if comparison.get("planners_agree"):
+            st.caption(
+                f"OR-Tools selects the same candidate ({comparison.get('ortools_candidate_id')}), "
+                f"status {comparison['ortools_status']}."
+            )
+        else:
+            st.warning(
+                "OR-Tools selected "
+                f"{comparison.get('ortools_candidate_id') or 'no candidate'}, "
+                f"while deterministic ranking selected {comparison.get('deterministic_candidate_id')}."
+            )
     exclusions = context.get("excluded_candidates") or []
     if exclusions:
         section_title("Excluded candidates", "Infeasible options remain visible with their exact exclusion reasons.")
@@ -280,6 +326,8 @@ def render_review_context(context: dict | None) -> None:
         render_case(context)
     elif context.get("review_kind") == "market_signal_review":
         render_market_signal(context)
+    elif context.get("planning_status") == "infeasible":
+        render_decision(context)
     else:
         render_decision(context)
         render_allocations(context)

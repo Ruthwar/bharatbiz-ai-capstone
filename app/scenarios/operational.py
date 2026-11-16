@@ -2,13 +2,15 @@ import hashlib
 from datetime import date
 from decimal import Decimal
 
+from app.agents.inventory import available_to_promise, shortage_units
 from app.agents.supplier import build_supplier_options
 from app.extraction.base import Extraction
-from app.optimization.baseline import build_view_candidate_plans, select_best_plan
+from app.optimization.baseline import build_view_candidate_plans
 from app.optimization.context import build_planning_view
+from app.optimization.negotiation import negotiate
 from app.scenarios.contracts import ScenarioFixture, ScenarioOverlays
 from app.schemas.contracts import AgentResult, BusinessEvent, BusinessState, MessageSubmission, Recommendation
-from app.verification.checks import verify_scenario_plan
+from app.verification.checks import verify_inventory_identity, verify_scenario_plan
 
 
 def _stable_id(prefix: str, *parts: str) -> str:
@@ -155,8 +157,38 @@ def run_operational_scenario(
         view.planning_horizon,
     )
     candidates, exclusions = build_view_candidate_plans(view, options)
-    selected = select_best_plan(candidates)
-    verification = verify_scenario_plan(state, selected, overlays, sku_id)
+    inventory_row = next(row for row in state.inventory if row["sku_id"] == sku_id)
+    atp = available_to_promise(
+        inventory_row["on_hand_units"],
+        inventory_row["reserved_units"],
+        inventory_row["incoming_units"],
+    )
+    identity_violations = verify_inventory_identity(
+        inventory_row["on_hand_units"],
+        inventory_row["reserved_units"],
+        inventory_row["incoming_units"],
+        atp,
+        shortage_units(atp, demand),
+    )
+    if identity_violations:
+        return _clarification(
+            message,
+            event,
+            extraction,
+            "Inventory identity failed: " + ", ".join(identity_violations),
+        )
+    agreement = negotiate(candidates, exclusions)
+    negotiation = agreement.as_dict()
+    negotiation["constraint_checks"] = [
+        "Inventory identity holds: on_hand - reserved + incoming equals ATP, and shortage is non-negative.",
+        *negotiation["constraint_checks"],
+    ]
+    selected = agreement.selected
+    verification = (
+        verify_scenario_plan(state, selected, overlays, sku_id)
+        if selected is not None
+        else None
+    )
 
     assumptions = [
         "Scenario arrival dates are planning estimates, not supplier-confirmed commitments.",
@@ -177,34 +209,48 @@ def run_operational_scenario(
     event.inferences["scenario_overlay_count"] = str(len(view.overlay_audit))
 
     warnings = []
-    if selected.late_units:
-        warnings.append(f"{selected.late_units} {unit} units remain late in the selected plan.")
-    if selected.unmet_units:
-        warnings.append(f"{selected.unmet_units} {unit} units remain unmet; no feasible candidate covers all demand.")
-    if not verification.valid:
-        warnings.extend(verification.violations)
-
-    option = selected.supplier_option
-    if option:
-        label = option.supplier_name or option.supplier_id
+    if not agreement.planners_agree:
+        warnings.append("Deterministic ranking and OR-Tools selected different candidates.")
+    if selected is None:
+        event.status = "infeasible"
+        warnings.extend(agreement.infeasibility_reasons)
         summary = (
-            f"Recommended scenario option: {option.quantity_units} {unit} units from {label} "
-            f"({option.supplier_id}); {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
-            f"{selected.late_units} late, {selected.unmet_units} unmet. Awaiting human review."
+            "No feasible plan. "
+            + "; ".join(agreement.infeasibility_reasons)
+            + ". Nothing is submitted for approval."
         )
+        review_status = "infeasible"
+        recommendation_key = "infeasible"
     else:
-        summary = (
-            f"Use available stock: {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
-            f"{selected.late_units} late, {selected.unmet_units} unmet. Awaiting human review."
-        )
+        if selected.late_units:
+            warnings.append(f"{selected.late_units} {unit} units remain late in the selected plan.")
+        if selected.unmet_units:
+            warnings.append(f"{selected.unmet_units} {unit} units remain unmet; no feasible candidate covers all demand.")
+        if verification is not None and not verification.valid:
+            warnings.extend(verification.violations)
+        option = selected.supplier_option
+        if option:
+            label = option.supplier_name or option.supplier_id
+            summary = (
+                f"Recommended scenario option: {option.quantity_units} {unit} units from {label} "
+                f"({option.supplier_id}); {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
+                f"{selected.late_units} late, {selected.unmet_units} unmet. Awaiting human review."
+            )
+        else:
+            summary = (
+                f"Use available stock: {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
+                f"{selected.late_units} late, {selected.unmet_units} unmet. Awaiting human review."
+            )
+        review_status = "pending_review" if verification is not None and verification.valid else "needs_clarification"
+        recommendation_key = selected.candidate_id
     recommendation = Recommendation(
-        recommendation_id=_stable_id("rec", event.event_id, selected.candidate_id),
+        recommendation_id=_stable_id("rec", event.event_id, recommendation_key),
         state_version=state.state_version,
         summary=summary,
         evidence_refs=[message.message_id, state.state_version],
         assumptions=assumptions,
         warnings=warnings,
-        review_status="pending_review" if verification.valid else "needs_clarification",
+        review_status=review_status,
     )
     result = {
         "message": message.model_dump(mode="json"),
@@ -225,8 +271,9 @@ def run_operational_scenario(
         "supplier_options": [option.model_dump(mode="json") for option in options],
         "candidate_plans": [plan.model_dump(mode="json") for plan in candidates],
         "excluded_candidates": [exclusion.model_dump(mode="json") for exclusion in exclusions],
-        "selected_plan": selected.model_dump(mode="json"),
-        "verification": verification.model_dump(mode="json"),
+        "negotiation": negotiation,
+        "selected_plan": selected.model_dump(mode="json") if selected is not None else None,
+        "verification": verification.model_dump(mode="json") if verification is not None else None,
         "recommendation": recommendation.model_dump(mode="json"),
         "counterfactuals": [],
         "trace": [
@@ -235,22 +282,32 @@ def run_operational_scenario(
             "event_extracted",
             "specialists_completed",
             "candidates_optimized",
-            "independently_verified",
-            "pending_human_review" if verification.valid else "verification_failed",
+            "infeasible" if selected is None else "independently_verified",
+            "not_submitted_for_approval"
+            if selected is None
+            else "pending_human_review"
+            if verification is not None and verification.valid
+            else "verification_failed",
         ],
         "mode": extraction.mode,
     }
     if view.receipts:
         counter_candidates, counter_exclusions = build_view_candidate_plans(view, options, "on_time")
-        counter_selected = select_best_plan(counter_candidates)
-        counter_verification = verify_scenario_plan(state, counter_selected, overlays, sku_id, "on_time")
+        counter_agreement = negotiate(counter_candidates, counter_exclusions)
+        counter_selected = counter_agreement.selected
+        counter_verification = (
+            verify_scenario_plan(state, counter_selected, overlays, sku_id, "on_time")
+            if counter_selected is not None
+            else None
+        )
         result["counterfactuals"].append(
             {
                 "name": "receipts_on_time",
                 "candidate_plans": [plan.model_dump(mode="json") for plan in counter_candidates],
                 "excluded_candidates": [row.model_dump(mode="json") for row in counter_exclusions],
-                "selected_plan": counter_selected.model_dump(mode="json"),
-                "verification": counter_verification.model_dump(mode="json"),
+                "selected_plan": counter_selected.model_dump(mode="json") if counter_selected is not None else None,
+                "verification": counter_verification.model_dump(mode="json") if counter_verification is not None else None,
+                "negotiation": counter_agreement.as_dict(),
             }
         )
     return result

@@ -49,6 +49,10 @@
     "scenario_arrival_date": "2026-11-03",
     "ending_cash_rupees": "245123.54",
     "headroom_rupees": "195123.54",
-    "verification_valid": true
+    "verification_valid": true,
+    "planning_status": "feasible",
+    "planners_agree": true,
+    "ortools_status": "OPTIMAL",
+    "ortools_candidate_id": "supplier-SUP-002"
   }
 }
