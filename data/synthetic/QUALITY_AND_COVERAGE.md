@@ -28,6 +28,9 @@
 | `historical_order_lines.csv` | 80 | `order_id` (line-level) | `retailer_id`, `sku_id` | `source_type` | Verified |
 | `open_orders.csv` | 30 | `order_id` | `retailer_id`, `sku_id` | `source_type` | Verified |
 | `supplier_deliveries.csv` | 50 | `delivery_id` | `supplier_id`, `sku_id` | `source_type` | Verified against listed offers |
+| `scheduled_receivables.csv` | 30 | `receivable_id` | `retailer_id` | `currency`, `state_version`, `source_type` | Verified |
+| `retailer_complaints.csv` | 25 | `complaint_id` | `retailer_id`, `sku_id` | `state_version`, `source_type` | Verified |
+| `market_observations.csv` | 30 | `observation_id` | `source_id`, `retailer_id`, `sku_id` | `corroboration_status`, `confidence`, `state_version`, `source_type` | Verified |
 | `cash_ledger.csv` | 30 | `entry_id` | None | `source_type` | Verified |
 | `scenarios.csv` / `scenarios.json` | 8 | `scenario_id` | None | Benchmark definitions | Verified (8 definitions) |
 | `messages.jsonl` | 1,000 | Message ID | Entity references in `entities` | Synthetic intake messages | Verified |
@@ -35,7 +38,7 @@
 | `business_state.json` | 1 object | Snapshot | Aggregates ledger/inventory | Point-in-time state | Verified |
 | `scenario_fixtures/SCN-003.json` | 1 fixture | `SCN-003` | `scenario_id` | Deterministic test fixture | Verified |
 
-`purchase_order_id` in `supplier_deliveries.csv` is a synthetic reference identifier; there is no purchase-order master table in this dataset version. `events.jsonl` does not contain extracted entity facts.
+`purchase_order_id` in `supplier_deliveries.csv` is a synthetic reference identifier; there is no purchase-order master table in this dataset version. `events.jsonl` does not contain extracted entity facts. The three extended tables are state-versioned and validated by `data/data_check.py`.
 
 ---
 
@@ -48,12 +51,13 @@
 * **Domain Constraints:**
   * Supplier offers and all 50 supplier-delivery rows are restricted to the 47 listed `(supplier_id, sku_id)` pairs in `supplier_products.csv`.
   * `supplier_deliveries.csv` explicitly tracks schedule variance via `planned_date`, `actual_date`, `delay_days`, and `status`.
+  * `scheduled_receivables.csv` uses exact two-decimal INR strings and retailer foreign keys; complaint and market-observation rows use retailer/SKU foreign keys and the current state version.
 * **Repeatable Checks:** `data/data_check.py` validates row counts, unique keys, synthetic lineage, retailer/SKU references, supplier-offer pairs, one-to-one message-event links, scenario CSV/JSON equality and timestamp formats.
 
 ---
 
 ## 4. Coverage & Team Handoffs
-* **Coverage Summary:** Covers 12 FMCG/retail SKUs across 5 suppliers and 20 retailers (`shop_type`, `area`, `service_priority`), backed by 80 historical order lines, 30 open orders, 50 supplier deliveries, 30 cash ledger entries, 8 scenario definitions (`scenarios.csv` / `scenarios.json`), and 1,000 message-event pairs. SCN-003 currently has an executable scenario fixture; the remaining definitions still require fixtures and handlers.
+* **Coverage Summary:** Covers 12 FMCG/retail SKUs across 5 suppliers and 20 retailers (`shop_type`, `area`, `service_priority`), backed by 80 historical order lines, 30 open orders, 50 supplier deliveries, 30 scheduled receivables, 25 retailer complaints, 30 market observations, 30 cash ledger entries, 8 scenario definitions (`scenarios.csv` / `scenarios.json`), and 1,000 message-event pairs. SCN-003 currently has an executable scenario fixture; the remaining definitions still require fixtures and handlers.
 * **Handoff to Ruthwar & Rajesh (Labels & Evidence):**
   * Use `messages.jsonl` (`intent`, JSON-string `entities`, `evidence_span`, and `uncertainty`) for intake extraction and classification evaluation.
   * Use `events.jsonl` (`source_message_ids`, `event_type`, `evidence_spans`, and review metadata) for event-routing and review evaluation, not as a source of extracted entity facts.

@@ -7,7 +7,7 @@ Two classes of document are mixed in one corpus and never blurred:
 - **Synthetic** (`classification: synthetic`) — written for this capstone. Fictional parties, fictional amounts, labelled `SIMULATION ONLY` in every file, licensed CC0-1.0.
 - **Public regulation** (`classification: public_regulation`) — real Government of India text, quoted in short excerpts with a source URL and retrieval date. Commentary around the quotes is this project's and is marked as such.
 
-## 1. Synthetic corpus (17 documents)
+## 1. Synthetic corpus (27 documents)
 
 | ID | Type | Title | Effective | Used for |
 | --- | --- | --- | --- | --- |
@@ -28,6 +28,16 @@ Two classes of document are mixed in one corpus and never blurred:
 | CASE-2026-009 | case_note | Split Delivery at Month End | 2026-09-28 | Percentage is not a quantity; two dates cannot be averaged |
 | CASE-2026-021 | case_note | Re-quote After Approval | 2026-10-30 | Approval is a snapshot, not a standing permission |
 | CASE-2026-005 | case_note | Retailer Reporting a Supplier Delay | 2026-09-12 | Why the identity gate exists |
+| POL-DEM-007 | policy | Demand Simulation and Scenario Policy | 2026-11-15 | Labelled scenarios, fixed state inputs and no execution |
+| POL-STK-007 | policy | Physical-Stock Reconciliation Policy | 2026-11-15 | Count variance, reservations and approved stock adjustments |
+| POL-LIQ-007 | policy | Liquidity and Cash-Flow Control Policy | 2026-11-15 | Cash headroom, immediate outflow and exclusion of breaches |
+| POL-RCM-007 | policy | Retailer Complaints and Resolution Policy | 2026-11-15 | Complaint evidence, triage and human-approved remedies |
+| POL-MSC-007 | policy | Market-Signal Corroboration Policy | 2026-11-15 | Independent corroboration and uncertainty labels |
+| SOP-DEM-007 | sop | Demand Simulation SOP | 2026-11-15 | Reproducible scenario procedure and comparison outputs |
+| SOP-STK-007 | sop | Physical-Stock Reconciliation SOP | 2026-11-15 | Count, recount, adjustment and plan refresh procedure |
+| SOP-LIQ-007 | sop | Liquidity Monitoring and Approval SOP | 2026-11-15 | Deterministic liquidity calculation before review |
+| SOP-RCM-007 | sop | Retailer Complaint Intake and Triage SOP | 2026-11-15 | Complaint intake, evidence capture and escalation |
+| SOP-MSC-007 | sop | Market-Signal Collection and Corroboration SOP | 2026-11-15 | Signal collection, duplicate handling and expiry |
 
 Consistency checks applied while writing:
 
@@ -35,6 +45,7 @@ Consistency checks applied while writing:
 - The worked example uses the real fixture: 102 units requested, 56 usable, 46 bought, 12 delayed incoming units, horizon 2026-11-04.
 - The cash example uses the state's actual buffer of ₹50,000 and opening cash of ₹2,50,000.
 - Nothing in the policies grants the system an action the code does not take: no orders, no payments, no outbound messages.
+- The five new policy/SOP pairs are synthetic, effective 2026-11-15, carry CC0-1.0 synthetic licences and contain no source URLs or real-party claims.
 
 ## 2. Regulatory extracts (3 documents)
 

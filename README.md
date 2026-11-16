@@ -105,8 +105,8 @@ Use `python scripts/reset_demo.py` to clear both the review ledger and retail ru
 - `app/rag/` corpus loader and SQLite FTS5 citation retriever over the approved reference documents
 - `app/dashboard/` Streamlit operations console with overview, intake, scenario lab, decision desk, retail desk, operations data and knowledge search
 - `data/synthetic/` generated synthetic CSV/JSONL and data dictionary
-- `data/knowledge_docs/` 20 approved reference documents (17 synthetic policies, SOPs, supplier terms and case notes, 3 cited regulatory extracts), plus `manifest.json`
-- `data/eval/` golden retrieval queries and evaluation labels
+- `data/knowledge_docs/` 30 approved reference documents (27 synthetic policies, SOPs, supplier terms and case notes, 3 cited regulatory extracts), plus `manifest.json`
+- `data/eval/` golden retrieval queries, held-out extraction examples and evaluation labels kept separate from tuning data
 - `data/pilot_deidentified/` reserved for authorized, de-identified pilot samples; empty by default
 - `data/labels/` annotation guide and evaluation labels
 - `docs/` kickoff, team ownership and individual role briefs
@@ -115,7 +115,7 @@ Use `python scripts/reset_demo.py` to clear both the review ledger and retail ru
 
 Generate the new plan-aligned pack with `python scripts/generate_synthetic_data.py --seed 20261105`. The script is deterministic for a fixed seed and labels every row synthetic. It creates 1,000 language examples and coherent, small operational tables for repeatable scenario work. The former v1 data pack remains in the parent folder as a historical reference; it is not the source of truth for this repo.
 
-The knowledge corpus is curated, not generated. Rebuild its index and manifest with `python scripts/build_rag_index.py` after any edit, and measure retrieval with `python scripts/eval_rag.py` (30 golden queries, recall@k and a term-frequency baseline). Sources, licences and retrieval dates are recorded in `docs/RAG_CORPUS_SOURCES.md`; the measured results and known failures are in `docs/RAG_EVALUATION.md`. The review card cites up to three sections with document id, effective date, verbatim quote and licence. Retrieval supplies text, never quantities, prices or dates.
+The knowledge corpus is curated, not generated. Rebuild its index and manifest with `python scripts/build_rag_index.py` after any edit, and measure retrieval with `python scripts/eval_rag.py` (40 golden queries, recall@k and a term-frequency baseline). Sources, licences and retrieval dates are recorded in `docs/RAG_CORPUS_SOURCES.md`; the measured results and known failures are in `docs/RAG_EVALUATION.md`. The review card cites up to three sections with document id, effective date, verbatim quote and licence. Retrieval supplies text, never quantities, prices or dates.
 
 Keep original text separate from extracted facts and inferences. Facts must include exact evidence spans; unknown dates, quantities, SKUs, order references and identities stay unknown. Use ISO dates, explicit units, exact `Decimal` rupee values with two decimal places for money and stable IDs.
 

@@ -67,10 +67,133 @@ def write_csv(path: Path, rows: list[dict]) -> None:
         writer.writerows(rows)
 
 
+def generate_historical_deliveries(num_rows: int, suppliers: list[dict], products: list[dict],
+                                   offers: list[dict], rng: random.Random, base: date,
+                                   state_version: str) -> list[dict]:
+    """Generate deterministic delivery history using valid supplier/SKU offer pairs."""
+    deliveries = []
+    offer_by_pair = {(offer["supplier_id"], offer["sku_id"]): offer for offer in offers}
+    offers_by_supplier = {}
+    for offer in offers:
+        offers_by_supplier.setdefault(offer["supplier_id"], []).append(offer)
+    for i in range(1, num_rows + 1):
+        supplier, product = rng.choice(suppliers), rng.choice(products)
+        offer = offer_by_pair.get((supplier["supplier_id"], product["sku_id"]))
+        if offer is None:
+            supplier_offers = offers_by_supplier[supplier["supplier_id"]]
+            offer = supplier_offers[(i - 1) % len(supplier_offers)]
+        delay = rng.choice([0, 0, 0, 1, 2])
+        planned = base - timedelta(days=rng.randint(1, 30))
+        deliveries.append({
+            "delivery_id": f"DEL-{i:04d}",
+            "purchase_order_id": f"PO-{i:04d}",
+            "supplier_id": offer["supplier_id"],
+            "sku_id": offer["sku_id"],
+            "quantity_units": rng.randint(5, 50),
+            "planned_date": planned.isoformat(),
+            "actual_date": (planned + timedelta(days=delay)).isoformat(),
+            "delay_days": delay,
+            "status": "delivered",
+            "unit": product["base_unit"] if product["sku_id"] == offer["sku_id"] else next(p["base_unit"] for p in products if p["sku_id"] == offer["sku_id"]),
+            "state_version": state_version,
+            "source_type": "synthetic",
+        })
+    return deliveries
+
+
+def generate_scheduled_receivables(num_rows: int, retailers: list[dict], rng: random.Random,
+                                   base: date, state_version: str) -> list[dict]:
+    """Generate deterministic scheduled retailer receivables."""
+    receivables = []
+    for i in range(1, num_rows + 1):
+        issue_date = base - timedelta(days=rng.randint(1, 30))
+        due_date = issue_date + timedelta(days=rng.choice([7, 14, 15, 21]))
+
+        days_until_due = (due_date - base).days
+
+        if days_until_due < 0:
+            status = "overdue"
+        elif days_until_due <= 7:
+            status = "due_soon"
+        else:
+            status = "scheduled"
+        receivables.append({
+            "receivable_id": f"REC-{i:04d}",
+            "retailer_id": rng.choice(retailers)["retailer_id"],
+            "amount_rupees": format(Decimal(rng.randint(500000, 7500000)) / 100, ".2f"),
+            "currency": "INR",
+            "issue_date": issue_date.isoformat(),
+            "due_date": due_date.isoformat(),
+            "status": status, 
+            "state_version": state_version,
+            "source_type": "synthetic",
+        })
+    return receivables
+
+def generate_retailer_complaints(num_rows: int, retailers: list[dict], products: list[dict], rng: random.Random,
+                                 base_date: date, state_version: str) -> list[dict]:
+    """Generates historical and active retailer complaint records."""
+    complaints = []
+    categories = ["delivery_delay", "damaged_goods", "short_shipment", "billing_dispute"]
+    statuses = ["open", "investigating", "resolved", "closed"]
+    for i in range(1, num_rows + 1):
+        r = rng.choice(retailers)
+        p = rng.choice(products)
+        logged_date = base_date - timedelta(days=rng.randint(1, 45))
+        status = rng.choice(statuses)
+        if status in {"open", "investigating"}:
+            resolution_notes = "Pending review"
+        else:
+            resolution_notes = rng.choice([
+                "Resolved via credit note",
+                "Resolved after replacement shipment",
+                "Closed after retailer confirmation",
+            ])
+        complaints.append({
+            "complaint_id": f"CMP-{i:03d}",
+            "retailer_id": r["retailer_id"],
+            "sku_id": p["sku_id"],
+            "complaint_date": logged_date.isoformat(),
+            "category": rng.choice(categories),
+            "status": status,
+            "resolution_notes": resolution_notes,
+            "state_version": state_version,
+            "source_type": "synthetic"
+        })
+    return complaints
+
+
+def generate_market_observations(num_rows: int, retailers: list[dict], products: list[dict],
+                                 rng: random.Random, base: date, state_version: str) -> list[dict]:
+    """Generate attributed, explicitly uncertain market observations."""
+    signal_types = ["competitor_promotion", "local_event", "price_observation", "availability_report"]
+    directions = ["up", "down", "unchanged", "unclear"]
+    rows = []
+    for i in range(1, num_rows + 1):
+        retailer = rng.choice(retailers)
+        product = rng.choice(products)
+        observed = base - timedelta(days=rng.randint(1, 30))
+        signal_type = rng.choice(signal_types)
+        rows.append({
+            "observation_id": f"MKT-{i:04d}",
+            "source_id": f"VISIT-{i:04d}",
+            "retailer_id": retailer["retailer_id"],
+            "sku_id": product["sku_id"],
+            "observed_date": observed.isoformat(),
+            "signal_type": signal_type,
+            "direction": rng.choice(directions),
+            "observation_text": f"Synthetic {signal_type.replace('_', ' ')} observed near {retailer['retailer_name']}; corroboration required.",
+            "corroboration_status": "single_source",
+            "confidence": "low",
+            "state_version": state_version,
+            "source_type": "synthetic",
+        })
+    return rows
 def generate(out: Path, seed: int) -> None:
     rng = random.Random(seed)
     out.mkdir(parents=True, exist_ok=True)
     base = date(2026, 11, 1)
+    state_version = "synthetic-v2-seed-" + str(seed)
     products = [{"sku_id": f"SKU-{i+1:03}", "category": cat, "product_name": cat,
                  "pack_description": pack, "base_unit": unit, "units_per_case": units,
                  "unit_cost_rupees": format(Decimal(80) + Decimal(i) * Decimal("9.25"), ".2f"),
@@ -117,21 +240,7 @@ def generate(out: Path, seed: int) -> None:
         supplier["supplier_id"]: [offer for offer in offers if offer["supplier_id"] == supplier["supplier_id"]]
         for supplier in suppliers
     }
-    deliveries = []
-    for i in range(50):
-        s, p = rng.choice(suppliers), rng.choice(products)
-        offer = offer_by_pair.get((s["supplier_id"], p["sku_id"]))
-        if offer is None:
-            # Repair unlisted pairs without consuming extra random values and changing unrelated output.
-            supplier_offers = offers_by_supplier[s["supplier_id"]]
-            offer = supplier_offers[i % len(supplier_offers)]
-        delay = rng.choice([0, 0, 0, 1, 2])
-        planned = base - timedelta(days=rng.randint(1, 30))
-        deliveries.append({"delivery_id": f"DEL-{i+1:04}", "purchase_order_id": f"PO-{i+1:04}",
-                           "supplier_id": offer["supplier_id"], "sku_id": offer["sku_id"],
-                           "quantity_units": rng.randint(5, 50), "planned_date": planned.isoformat(),
-                           "actual_date": (planned + timedelta(days=delay)).isoformat(), "delay_days": delay,
-                           "status": "delivered", "source_type": "synthetic"})
+    deliveries = generate_historical_deliveries(50, suppliers, products, offers, rng, base, state_version)
     cash = [{"entry_id": f"CASH-{i+1:03}", "entry_date": (base - timedelta(days=29-i)).isoformat(),
              "entry_type": "inflow" if i % 3 == 0 else "outflow",
              "amount_rupees": format(
@@ -159,7 +268,7 @@ def generate(out: Path, seed: int) -> None:
     write_csv(out / "supplier_deliveries.csv", deliveries)
     write_csv(out / "cash_ledger.csv", cash)
     (out / "business_state.json").write_text(json.dumps({
-        "state_version": "synthetic-v2-seed-" + str(seed),
+        "state_version": state_version,
         "as_of_date": base.isoformat(),
         "opening_cash_rupees": "250000.00",
         "minimum_cash_buffer_rupees": "50000.00",
@@ -208,9 +317,18 @@ def generate(out: Path, seed: int) -> None:
     (out / "DATA_DICTIONARY.md").write_text(
         "# Synthetic dataset dictionary\n\nGenerated by `scripts/generate_synthetic_data.py`; all entities and events are fictional. Reproducible with a fixed seed. Currency is exact decimal rupees with two decimal places; quantities use the explicit `unit`/`base_unit` field. Dates are ISO 8601; timestamps include +05:30. `messages.jsonl` contains 1,000 labelled synthetic examples; `events.jsonl` has corresponding evidence-linked event annotations. Keep both separate from any permissioned pilot data. `scenarios.csv/json` provide eight repeatable cases. Supplier offers are valid only for listed supplier-SKU rows. No value represents verified local prices or business activity.\n\n"
         "Supplier and retailer rows carry fictional trade names (`supplier_name`, `retailer_name`, `shop_type`, locality `area`). Names are display labels only; `supplier_id` and `retailer_id` remain the internal join keys used by orders, deliveries, facts, plans and review records. Messages quote trade names the way a person would write them, while the `entities` annotation stores both the name and the matching ID.\n\n"
-        "Tables: products, suppliers, retailers, supplier_products, inventory, historical_order_lines, open_orders, supplier_deliveries, cash_ledger, scenarios and messages/events. Stable IDs connect related rows. Unknown source facts must remain unknown.\n",
+        "Tables: products, suppliers, retailers, supplier_products, inventory, historical_order_lines, open_orders, supplier_deliveries, scheduled_receivables, retailer_complaints, market_observations, cash_ledger, scenarios and messages/events. Stable IDs, explicit units, two-decimal INR strings and state_version values connect related rows. Unknown source facts must remain unknown.\n\n"
+        "Extended tables: `scheduled_receivables` uses `receivable_id` with a `retailer_id` foreign key and exact INR amounts; `retailer_complaints` uses `complaint_id` with `retailer_id` and `sku_id` foreign keys; `market_observations` uses `observation_id` and `source_id` with retailer/SKU scope, explicit uncertainty and corroboration status. All three carry the business state's `state_version` and `source_type: synthetic`.\n",
         encoding="utf-8")
     print(f"Generated synthetic pack at {out} (seed={seed}, messages={len(messages)}, scenarios={len(scenarios)})")
+    scheduled_receivables = generate_scheduled_receivables(30, retailers, rng, base, state_version)
+    retailer_complaints = generate_retailer_complaints(25, retailers, products, rng, base, state_version)
+    market_observations = generate_market_observations(30, retailers, products, rng, base, state_version)
+
+    # Write them out
+    write_csv(out / "scheduled_receivables.csv", scheduled_receivables)
+    write_csv(out / "retailer_complaints.csv", retailer_complaints)
+    write_csv(out / "market_observations.csv", market_observations)
 
 
 if __name__ == "__main__":

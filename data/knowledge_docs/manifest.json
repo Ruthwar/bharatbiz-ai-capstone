@@ -1,8 +1,8 @@
 {
-  "corpus_version": "2026-11-13",
-  "document_count": 20,
-  "section_count": 131,
-  "total_bytes": 67877,
+  "corpus_version": "2026-11-15",
+  "document_count": 30,
+  "section_count": 186,
+  "total_bytes": 90712,
   "documents": [
     {
       "document_id": "CASE-2026-005",
@@ -14,9 +14,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "CASE-2026-005.md",
-      "bytes": 2124,
+      "bytes": 2174,
       "sections": 8,
-      "sha256": "fe4930c4149c696f252436b24716935487b84ca6645cbadbda79c283d968ea90"
+      "sha256": "d6f17af1ad4118ed025af1cec5c314eb92523de296b603aab1e40ace8b108caf"
     },
     {
       "document_id": "CASE-2026-009",
@@ -28,9 +28,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "CASE-2026-009.md",
-      "bytes": 2253,
+      "bytes": 2301,
       "sections": 7,
-      "sha256": "3ee3dbf0738ae1456fa43e3a7c963458f415483863e8ceabebae93ea9cb6dd3c"
+      "sha256": "32fa4f8d00a2eed9c0bdafa4fd0fb2ca97c7daabede325836756773ce17c12a8"
     },
     {
       "document_id": "CASE-2026-014",
@@ -42,9 +42,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "CASE-2026-014.md",
-      "bytes": 2580,
+      "bytes": 2633,
       "sections": 7,
-      "sha256": "d82ba34947644cf82fcdea79d60734dce1c0f5e76dc588b2fbc494cfd4150594"
+      "sha256": "8d2fde58ef8c7fd8e95f4df6e4716e586bdf6aec19341c87d9d0af7a27753edc"
     },
     {
       "document_id": "CASE-2026-021",
@@ -56,9 +56,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "CASE-2026-021.md",
-      "bytes": 2157,
+      "bytes": 2205,
       "sections": 7,
-      "sha256": "85fcc4f9020f2fdb05b72a7cf2002f26e5533633e074a44ec13736c34bf75d29"
+      "sha256": "422d070f8de8af0560863c8420ce6440afc712149a46c98607dbcfd7099e6c6a"
     },
     {
       "document_id": "POL-COM-006",
@@ -70,9 +70,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "POL-COM-006.md",
-      "bytes": 2889,
+      "bytes": 2942,
       "sections": 5,
-      "sha256": "18b6880eda06574563ee59207648892b6276d57321be8e2fa7ed77432e40b826"
+      "sha256": "6ec0fad97c2696fd25a0dd9d36fc437d7d3311d7f7c54e2710fbe6df8e3d0b1d"
     },
     {
       "document_id": "POL-CSH-002",
@@ -84,9 +84,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "POL-CSH-002.md",
-      "bytes": 3540,
+      "bytes": 3593,
       "sections": 6,
-      "sha256": "a97db51402dcf092bc49a2bfc873ca0de297377d3051209aeece27ad2458c447"
+      "sha256": "5702629c892213d7fc153c0451395b8cba648bce74016dd5e5ca36816f2837e4"
     },
     {
       "document_id": "POL-DAT-004",
@@ -98,9 +98,23 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "POL-DAT-004.md",
-      "bytes": 3219,
+      "bytes": 3275,
       "sections": 6,
-      "sha256": "100cbf2cc02992e894458d23ddacf88083d23fe56bfc8783282547e1c4ccc9db"
+      "sha256": "1c72924150c1c25223d59ab769d8d9da2d7409fbd7bfa35adcd25895f95de236"
+    },
+    {
+      "document_id": "POL-DEM-007",
+      "title": "Demand Simulation and Scenario Policy",
+      "doc_type": "policy",
+      "version": "1.0",
+      "effective_from": "2026-11-15",
+      "classification": "synthetic",
+      "source_url": null,
+      "retrieved_on": null,
+      "file": "POL-DEM-007.md",
+      "bytes": 3152,
+      "sections": 7,
+      "sha256": "74bfa3515c6732d129819d12db8b3c5d2eb6ab0c2e8a3ac58dcb4c55c1b28e12"
     },
     {
       "document_id": "POL-DLY-001",
@@ -112,9 +126,37 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "POL-DLY-001.md",
-      "bytes": 4759,
+      "bytes": 4819,
       "sections": 6,
-      "sha256": "b62d51fe3924e5718817239f328fc33d3fd8d302e68bebc6e64ef0db7bb1d245"
+      "sha256": "2bfe16b32603fcd0e973f6201b87a0e5278584a6a2da71c1d6742e6a75ca7661"
+    },
+    {
+      "document_id": "POL-LIQ-007",
+      "title": "Liquidity and Cash-Flow Control Policy",
+      "doc_type": "policy",
+      "version": "1.0",
+      "effective_from": "2026-11-15",
+      "classification": "synthetic",
+      "source_url": null,
+      "retrieved_on": null,
+      "file": "POL-LIQ-007.md",
+      "bytes": 2230,
+      "sections": 6,
+      "sha256": "dbe6c8f8c2b5f0425324d84f32d0ddd8ba08556303fd84543f3569488f55b4d8"
+    },
+    {
+      "document_id": "POL-MSC-007",
+      "title": "Market-Signal Corroboration Policy",
+      "doc_type": "policy",
+      "version": "1.0",
+      "effective_from": "2026-11-15",
+      "classification": "synthetic",
+      "source_url": null,
+      "retrieved_on": null,
+      "file": "POL-MSC-007.md",
+      "bytes": 2190,
+      "sections": 5,
+      "sha256": "d991294cd66045001aef17ec526a6cd844f1a115d59c9a82903bb17071258596"
     },
     {
       "document_id": "POL-PRC-005",
@@ -126,9 +168,37 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "POL-PRC-005.md",
-      "bytes": 2873,
+      "bytes": 2919,
       "sections": 5,
-      "sha256": "ece7918ae62a5cb29f4c61e98802592bfb4e7cea5071d4525a054f94ae6a061e"
+      "sha256": "81848dfa571623801b0db74cfc9695bd3e9f6da820f9d3d5c553111b9fa62803"
+    },
+    {
+      "document_id": "POL-RCM-007",
+      "title": "Retailer Complaints and Resolution Policy",
+      "doc_type": "policy",
+      "version": "1.0",
+      "effective_from": "2026-11-15",
+      "classification": "synthetic",
+      "source_url": null,
+      "retrieved_on": null,
+      "file": "POL-RCM-007.md",
+      "bytes": 2231,
+      "sections": 5,
+      "sha256": "3cbc1a5b2d18d31626e33e26ceccba46ce8f6cf573e692cb9fc99dc98d023e82"
+    },
+    {
+      "document_id": "POL-STK-007",
+      "title": "Physical-Stock Reconciliation Policy",
+      "doc_type": "policy",
+      "version": "1.0",
+      "effective_from": "2026-11-15",
+      "classification": "synthetic",
+      "source_url": null,
+      "retrieved_on": null,
+      "file": "POL-STK-007.md",
+      "bytes": 2534,
+      "sections": 6,
+      "sha256": "ec733de965ce96d09e9f4c43937c959eb063e10ca96eebfc60617b8af27349e6"
     },
     {
       "document_id": "POL-SUB-003",
@@ -140,9 +210,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "POL-SUB-003.md",
-      "bytes": 3155,
+      "bytes": 3209,
       "sections": 6,
-      "sha256": "fd7465436d0f5ad6e5b18720506786c4758d277bbb3bd061744a7e95e9067c7a"
+      "sha256": "c05909496603cfef2744f6cb7da84d482f27cc0792a88576c60b1c43af4cf904"
     },
     {
       "document_id": "REG-FSSAI-LAB-2020",
@@ -154,9 +224,9 @@
       "source_url": "https://fssai.gov.in/docs/food-law/regulations/Comp_Labelling%20Display_Version%20VIII_09_09_2025.pdf",
       "retrieved_on": "2026-11-13",
       "file": "REG-FSSAI-LAB-2020.md",
-      "bytes": 5063,
+      "bytes": 5119,
       "sections": 6,
-      "sha256": "ccade0602a8189d5ceb626b3b47392509bfe7b60be18336c4260bc9072a01940"
+      "sha256": "17cb611a08113b92f8dc1e094febb2c575fad3e44eae1aef4bdd8e1040e9857d"
     },
     {
       "document_id": "REG-GST-2025-09",
@@ -168,9 +238,9 @@
       "source_url": "https://jkcomtax.gov.in/pdf/GST%20rates2025.pdf",
       "retrieved_on": "2026-11-13",
       "file": "REG-GST-2025-09.md",
-      "bytes": 4858,
+      "bytes": 4923,
       "sections": 5,
-      "sha256": "1e500e52ed36481452fda6ffc88b357b989b5025c133796ae85d68945f3e7ef0"
+      "sha256": "9c95372c7810329c5ed90f791c7860b43438ce41520e44f9cfd09e351a297c08"
     },
     {
       "document_id": "REG-LMPC-2011-R6",
@@ -182,9 +252,23 @@
       "source_url": "https://indiankanoon.org/doc/100694501/",
       "retrieved_on": "2026-11-13",
       "file": "REG-LMPC-2011-R6.md",
-      "bytes": 4867,
+      "bytes": 4929,
       "sections": 8,
-      "sha256": "335bfa392eba2430e18504e8aaf1fd61e3a3feb811b1c191fc55d968ba964fa0"
+      "sha256": "f756a02a3e3e99a3794453fb431aa59352fcab5e2e8ca554a91b01f441ad17b4"
+    },
+    {
+      "document_id": "SOP-DEM-007",
+      "title": "Demand Simulation SOP",
+      "doc_type": "sop",
+      "version": "1.0",
+      "effective_from": "2026-11-15",
+      "classification": "synthetic",
+      "source_url": null,
+      "retrieved_on": null,
+      "file": "SOP-DEM-007.md",
+      "bytes": 2040,
+      "sections": 6,
+      "sha256": "070f82fa4ac2cf6f72acbb7417d2acf7215cab58522dc75c342db2f29f346b3e"
     },
     {
       "document_id": "SOP-INT-001",
@@ -196,9 +280,51 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "SOP-INT-001.md",
-      "bytes": 3271,
+      "bytes": 3334,
       "sections": 6,
-      "sha256": "30401e763dfc822ef129a0da6c5086d2911d172b29ace7abb7797254399da5b9"
+      "sha256": "9f3a25533abd6dc26979ebacb4522f83556d9465c911b23fac91126ed575f575"
+    },
+    {
+      "document_id": "SOP-LIQ-007",
+      "title": "Liquidity Monitoring and Approval SOP",
+      "doc_type": "sop",
+      "version": "1.0",
+      "effective_from": "2026-11-15",
+      "classification": "synthetic",
+      "source_url": null,
+      "retrieved_on": null,
+      "file": "SOP-LIQ-007.md",
+      "bytes": 1625,
+      "sections": 5,
+      "sha256": "a72eabed7cc5accc035b11e110d2ab7f70a1f8924ec89f5ea9d50023926af093"
+    },
+    {
+      "document_id": "SOP-MSC-007",
+      "title": "Market-Signal Collection and Corroboration SOP",
+      "doc_type": "sop",
+      "version": "1.0",
+      "effective_from": "2026-11-15",
+      "classification": "synthetic",
+      "source_url": null,
+      "retrieved_on": null,
+      "file": "SOP-MSC-007.md",
+      "bytes": 1953,
+      "sections": 5,
+      "sha256": "dd6c6faaf00ee8f2144441657ea5f1aa6a3154659b6c35ad0680528e58b25aa1"
+    },
+    {
+      "document_id": "SOP-RCM-007",
+      "title": "Retailer Complaint Intake and Triage SOP",
+      "doc_type": "sop",
+      "version": "1.0",
+      "effective_from": "2026-11-15",
+      "classification": "synthetic",
+      "source_url": null,
+      "retrieved_on": null,
+      "file": "SOP-RCM-007.md",
+      "bytes": 1934,
+      "sections": 5,
+      "sha256": "8a3eb8f2701a5f632556c5fe9a15189515acfd45335c07ad38e46a960915a495"
     },
     {
       "document_id": "SOP-REV-002",
@@ -210,9 +336,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "SOP-REV-002.md",
-      "bytes": 3294,
+      "bytes": 3353,
       "sections": 7,
-      "sha256": "62fb00a3429ebff7a647921f67bbddb5988f8d98fc490cf5d671bdb0bd89a240"
+      "sha256": "7b9c31fbe70b622b4e4e34be37f6f37fcc3da4846d3b78277f9ca4e86ca92ff7"
     },
     {
       "document_id": "SOP-SHT-003",
@@ -224,9 +350,23 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "SOP-SHT-003.md",
-      "bytes": 2988,
+      "bytes": 3047,
       "sections": 7,
-      "sha256": "d77a3025593682fe2bc4c032e75007914dd144ffafd277acbaeecae3c5096f99"
+      "sha256": "5f182c1d69ee94e87fa933cf9adc97131d2e7de028dbf962b0c6cb591cd7c223"
+    },
+    {
+      "document_id": "SOP-STK-007",
+      "title": "Physical-Stock Reconciliation SOP",
+      "doc_type": "sop",
+      "version": "1.0",
+      "effective_from": "2026-11-15",
+      "classification": "synthetic",
+      "source_url": null,
+      "retrieved_on": null,
+      "file": "SOP-STK-007.md",
+      "bytes": 1795,
+      "sections": 5,
+      "sha256": "5171241d65b3bca78ac60a3ce2d7efe17db3053e94f7d0ab89a5c4886607efba"
     },
     {
       "document_id": "SOP-STV-004",
@@ -238,9 +378,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "SOP-STV-004.md",
-      "bytes": 2531,
+      "bytes": 2586,
       "sections": 7,
-      "sha256": "e270ef65400c507f9d928c57b6e5eb695b20fb16028c2d3577d3c447d7cdf5b3"
+      "sha256": "b9df832c037d83d3005bfe97a77fa1528959fd57578718c38a1dccfe43101cdc"
     },
     {
       "document_id": "TRM-SUP-002",
@@ -252,9 +392,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "TRM-SUP-002.md",
-      "bytes": 4365,
+      "bytes": 4438,
       "sections": 8,
-      "sha256": "d03376da9448cdfce2bb056d9f8578d66393bcb939542203e140ce588565ab9c"
+      "sha256": "28fce7fc80d00519f2de9c58d48b0bb35ccc0b85ca838101d2bf03f2b228194b"
     },
     {
       "document_id": "TRM-SUP-003",
@@ -266,9 +406,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "TRM-SUP-003.md",
-      "bytes": 3464,
+      "bytes": 3533,
       "sections": 7,
-      "sha256": "d2d2d06aacb62e3122a8140c17bc32e81521109b5a64a52da6f91a8a0460bf3b"
+      "sha256": "66e507fffa17c2d842f2212f2929bd393cfed307ccc2a3867fb9cecf711aeceb"
     },
     {
       "document_id": "TRM-SUP-005",
@@ -280,9 +420,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "TRM-SUP-005.md",
-      "bytes": 3627,
+      "bytes": 3696,
       "sections": 7,
-      "sha256": "0adff8bf1bc31fde5cdaaeacbfbf3cf5b9da6c6b8d1f136aa6687cef8b401c5a"
+      "sha256": "ef965dd789173288a43a7d1a85e5bca6e757896f008340ffd2b0f80b7e2ac0cc"
     }
   ]
 }

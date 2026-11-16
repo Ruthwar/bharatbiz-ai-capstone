@@ -3,10 +3,12 @@
 import csv
 import json
 from datetime import date
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SYNTHETIC = ROOT / "data" / "synthetic"
+EVAL = ROOT / "data" / "eval"
 
 EXPECTED_COUNTS = {
     "products": 12,
@@ -17,6 +19,9 @@ EXPECTED_COUNTS = {
     "historical_order_lines": 80,
     "open_orders": 30,
     "supplier_deliveries": 50,
+    "scheduled_receivables": 30,
+    "retailer_complaints": 25,
+    "market_observations": 30,
     "cash_ledger": 30,
     "scenarios": 8,
 }
@@ -28,6 +33,9 @@ PRIMARY_KEYS = {
     "historical_order_lines": "order_id",
     "open_orders": "order_id",
     "supplier_deliveries": "delivery_id",
+    "scheduled_receivables": "receivable_id",
+    "retailer_complaints": "complaint_id",
+    "market_observations": "observation_id",
     "cash_ledger": "entry_id",
     "scenarios": "scenario_id",
 }
@@ -46,6 +54,23 @@ def _read_csv(name):
 def _read_jsonl(name):
     with (SYNTHETIC / f"{name}.jsonl").open(encoding="utf-8") as handle:
         return [json.loads(line) for line in handle if line.strip()]
+
+
+def _read_eval_jsonl(name):
+    with (EVAL / name).open(encoding="utf-8") as handle:
+        return [json.loads(line) for line in handle if line.strip()]
+
+
+def _require_money(value, label):
+    try:
+        parsed = Decimal(value)
+    except (InvalidOperation, TypeError):
+        raise ValueError(f"{label}: invalid money value {value!r}")
+    _require(parsed == parsed.quantize(Decimal("0.01")), f"{label}: money must have two decimals")
+
+
+def _require_state(row, state_version, label):
+    _require(row.get("state_version") == state_version, f"{label}: state_version mismatch")
 
 
 def validate():
@@ -78,6 +103,36 @@ def validate():
         pair = (row["supplier_id"], row["sku_id"])
         _require(pair in offers, f"supplier_deliveries: unapproved supplier-SKU pair {pair}")
         _require(date.fromisoformat(row["actual_date"]) >= date.fromisoformat(row["planned_date"]), f"{row['delivery_id']}: negative delivery delay")
+        _require(row["unit"] == next(item["base_unit"] for item in tables["products"] if item["sku_id"] == row["sku_id"]), f"{row['delivery_id']}: unit mismatch")
+
+    state = json.loads((SYNTHETIC / "business_state.json").read_text(encoding="utf-8"))
+    state_version = state["state_version"]
+    for name in ("scheduled_receivables", "retailer_complaints", "market_observations"):
+        for row in tables[name]:
+            _require_state(row, state_version, name)
+    for row in tables["scheduled_receivables"]:
+        _require(row["retailer_id"] in retailers, f"scheduled_receivables: unresolved {row['retailer_id']}")
+        _require(row["currency"] == "INR", f"{row['receivable_id']}: unsupported currency")
+        _require_money(row["amount_rupees"], f"{row['receivable_id']}: amount_rupees")
+        issue_date = date.fromisoformat(row["issue_date"])
+        due_date = date.fromisoformat(row["due_date"])
+        as_of = date.fromisoformat(state["as_of_date"])
+        _require(due_date >= issue_date, f"{row['receivable_id']}: due date before issue date")
+        days_until_due = (due_date - as_of).days
+        expected_status = "overdue" if days_until_due < 0 else "due_soon" if days_until_due <= 7 else "scheduled"
+        _require(row["status"] == expected_status, f"{row['receivable_id']}: status contradicts due_date")
+    for row in tables["retailer_complaints"]:
+        _require(row["retailer_id"] in retailers, f"retailer_complaints: unresolved {row['retailer_id']}")
+        _require(row["sku_id"] in products, f"retailer_complaints: unresolved {row['sku_id']}")
+        date.fromisoformat(row["complaint_date"])
+        if row["status"] in {"open", "investigating"}:
+            _require("pending" in row["resolution_notes"].lower(), f"{row['complaint_id']}: active complaint has resolution note")
+        else:
+            _require("pending" not in row["resolution_notes"].lower(), f"{row['complaint_id']}: closed complaint is still pending")
+    for row in tables["market_observations"]:
+        _require(row["retailer_id"] in retailers, f"market_observations: unresolved {row['retailer_id']}")
+        _require(row["sku_id"] in products, f"market_observations: unresolved {row['sku_id']}")
+        date.fromisoformat(row["observed_date"])
 
     messages = _read_jsonl("messages")
     events = _read_jsonl("events")
@@ -94,8 +149,27 @@ def validate():
         _require(message["observed_at"].endswith("+05:30"), f"{message['message_id']}: timestamp is not IST")
         _require(isinstance(json.loads(message["entities"]), dict), f"{message['message_id']}: invalid entities")
 
+    held_out = _read_eval_jsonl("heldout_extraction.jsonl")
+    held_out_ids = [row["message_id"] for row in held_out]
+    _require(len(held_out_ids) == len(set(held_out_ids)), "held-out: duplicate message_id")
+    _require(not set(held_out_ids) & message_ids, "held-out: overlaps training message IDs")
+    allowed_intents = {"delivery_complaint", "damaged_item", "missing_item", "product_request", "scheme_question", "supplier_delay", "competitor_observation", "other"}
+    for row in held_out:
+        _require(row["split"] == "held_out", f"{row['message_id']}: invalid split")
+        _require(row["source_type"] == "synthetic", f"{row['message_id']}: invalid source_type")
+        _require(row["state_version"] == state_version, f"{row['message_id']}: state_version mismatch")
+        _require(row["intent"] in allowed_intents, f"{row['message_id']}: invalid intent")
+        _require(all(span in row["text"] for span in row["evidence_spans"]), f"{row['message_id']}: evidence span not found")
+        _require(isinstance(row["entities"], dict), f"{row['message_id']}: invalid entities")
+
     scenarios_json = json.loads((SYNTHETIC / "scenarios.json").read_text(encoding="utf-8"))
     _require(scenarios_json == tables["scenarios"], "scenarios: CSV and JSON definitions differ")
+    fixture = json.loads((SYNTHETIC / "scenario_fixtures" / "SCN-003.json").read_text(encoding="utf-8"))
+    _require(fixture["scenario_id"] == "SCN-003", "SCN-003 fixture: wrong scenario id")
+    _require(fixture["message"]["state_version"] == state_version, "SCN-003 fixture: state_version mismatch")
+    _require(fixture["message"]["source_type"] == "supplier_update", "SCN-003 fixture: wrong source type")
+    _require(fixture["message"]["sender"]["party_id"] == fixture["assumptions"]["original_supplier_id"], "SCN-003 fixture: sender/supplier mismatch")
+    _require(fixture["assumptions"]["sku_id"] == "SKU-003", "SCN-003 fixture: unexpected SKU")
 
 
 def main():

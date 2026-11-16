@@ -16,11 +16,11 @@ A high retrieval score with a citation that does not justify the card would fail
 
 | Item | Value |
 | --- | --- |
-| Corpus | 20 documents, 131 sections, 66.3 KiB |
+| Corpus | 30 documents, 186 sections, 88.6 KiB |
 | Index | SQLite FTS5, BM25, porter + unicode61 |
 | Ranking | best section per document; sections must cover at least 35% of query content words |
 | Query construction | per-intent template plus extracted fact values; top 3 documents shown on the card |
-| Golden set | 30 queries, `data/eval/golden_queries.json`, written before measurement |
+| Golden set | 40 queries, `data/eval/golden_queries.json`, written before measurement |
 | Labels | each query names a primary document and a list of other documents that also answer it |
 | Command | `python scripts/eval_rag.py` |
 
@@ -28,18 +28,18 @@ Labels were not tuned to the ranking. Where a question is genuinely answered by 
 
 ## 3. Results
 
-Measured 2026-11-13 on the committed corpus:
+Measured 2026-11-15 on the expanded corpus:
 
 | Metric | BM25 (shipped) | Term-frequency baseline |
 | --- | --- | --- |
-| primary@1 | **80.0%** | 76.7% |
+| primary@1 | **77.5%** | 62.5% |
 | recall@3 | **100.0%** | 90.0% |
 | recall@5 | **100.0%** | — |
-| MRR | **0.858** | 0.837 |
+| MRR | **0.855** | 0.768 |
 | latency p50 | **1.1 ms** warm, 3.4 ms cold | — |
 | latency p95 | **2.0 ms** warm, 5.4 ms cold | — |
 
-The baseline is the obvious alternative: count query words in the whole document and sort. It is genuinely competitive on a 20-document corpus, which is the honest finding. BM25's advantage is ranking quality — the right document lands first more often, and the 10-point gap at recall@3 is the difference between "somewhere in the top five" and "in the top three the reviewer actually sees".
+The baseline is the obvious alternative: count query words in the whole document and sort. BM25 remains stronger on the expanded corpus. The original 30-query slice retains 100% recall@3 and remains above the repository's primary@1 and MRR test floors; the absolute primary@1 change reflects the additional, intentionally overlapping policy/SOP documents.
 
 ### Ablation: the coverage filter
 
@@ -77,6 +77,20 @@ This is the load-bearing test, done by inspection against the card's own fields:
 
 All six map to one of the three cited documents, so a reviewer can verify each line without opening a PDF.
 
+### Coverage for the added scenario controls
+
+The new golden queries and policy/SOP pairs extend the same citation-to-decision contract:
+
+| Decision area | Decision field or claim | Primary citation | Procedure citation |
+| --- | --- | --- | --- |
+| Demand simulation | Baseline, assumption, state version and scenario outputs remain separate | POL-DEM-007 §3 R1-R6 | SOP-DEM-007 §2 |
+| Physical stock | Counted, reserved and approved usable stock | POL-STK-007 §3 R2-R6 | SOP-STK-007 §2 |
+| Liquidity | Opening cash, immediate outflow, ending cash and headroom | POL-LIQ-007 §3 R1-R5 | SOP-LIQ-007 §2 |
+| Retailer complaints | Evidence, case ownership and human-approved remedy | POL-RCM-007 §2 R1-R7 | SOP-RCM-007 §2 |
+| Market signals | Independent corroboration, duplicate handling and uncertainty | POL-MSC-007 §2 R1-R7 | SOP-MSC-007 §2 |
+
+These mappings are labelled before measurement in `data/eval/golden_queries.json`; they are not generated from the observed ranking.
+
 ## 4. Where it fails
 
 | Query | Observed | Cause | Consequence |
@@ -101,7 +115,7 @@ Neither is needed for the demo. Both are recorded here so the limitation is a kn
 
 ## 6. Cost
 
-66 KiB, 20 files, one SQLite table, no embedding model, no network call, 1–4 ms per query, same answer every time. For a corpus this size, that is the right trade: a reviewer gets a checkable clause in the time it takes the card to render, and the demo has no new service to keep alive.
+88.6 KiB, 30 files, one SQLite table, no embedding model, no network call, sub-2 ms warm-query latency in this run, same answer every time. The corpus remains small enough for a deterministic lexical index and checkable citations.
 
 ## 7. Next, if the corpus grows
 
