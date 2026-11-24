@@ -1,7 +1,7 @@
 [
   {
     "scenario_id": "SCN-001",
-    "name": "Baseline day",
+    "name": "Normal day",
     "trigger": "Use starting operational state",
     "expected": "Feasible plan or explicit infeasibility; enforce stock, supplier and cash constraints"
   },
@@ -46,5 +46,41 @@
     "name": "Combined disruption",
     "trigger": "Demand increase, supplier delay and delayed payment together",
     "expected": "Replan under hard constraints or explain infeasibility"
+  },
+  {
+    "scenario_id": "SCN-010",
+    "name": "Overdue retailer with new order",
+    "trigger": "Retailer with an overdue receivable places a new order",
+    "expected": "Show exposure and hold for human credit review; no credit decision"
+  },
+  {
+    "scenario_id": "SCN-011",
+    "name": "Scheme claim mismatch",
+    "trigger": "Retailer claims a promotion that does not match the approved scheme register",
+    "expected": "Compare claim with scheme terms; no discount or credit note executed"
+  },
+  {
+    "scenario_id": "SCN-012",
+    "name": "Short and damaged delivery",
+    "trigger": "Received quantity, damage and wrong-item count differ from the purchase order",
+    "expected": "Show delivery variance and raise a supplier claim for human approval"
+  },
+  {
+    "scenario_id": "SCN-013",
+    "name": "Batch recall and quality hold",
+    "trigger": "Supplier issues a quality hold for one batch",
+    "expected": "Quarantine affected batch and block allocation; human approval only"
+  },
+  {
+    "scenario_id": "SCN-014",
+    "name": "Short-dated stock and return window",
+    "trigger": "Batch expires inside the supplier return window",
+    "expected": "Recommend return or priority dispatch; no stock mutation"
+  },
+  {
+    "scenario_id": "SCN-015",
+    "name": "Dispatch under vehicle capacity",
+    "trigger": "Route demand exceeds vehicle capacity",
+    "expected": "Allocate by priority and promised date; list deferred orders"
   }
 ]

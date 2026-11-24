@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.extraction.base import Extraction
-from app.extraction.rules import resolve_product
+from app.extraction.rules import product_clarification_options, resolve_product
 from app.extraction.validate import validate_extraction
 from app.main import app
 from app.orchestration import workflow
@@ -15,7 +15,7 @@ from app.state import load_business_state
 from app.store.ledger import ledger
 
 client = TestClient(app)
-STATE_VERSION = "synthetic-v2-seed-20261105"
+STATE_VERSION = "synthetic-v3-live-20261123"
 SCN003_TEXT = "Supplier SUP-005 reports a two-day delay for Cooking oil 1 L pouch; revised date is not confirmed."
 
 
@@ -58,6 +58,52 @@ def test_supplier_delay_is_acknowledged_and_planned():
     assert result["event"]["event_type"] == "supplier_delay"
     assert result["recommendation"]["review_status"] == "pending_review"
     assert len(ledger.pending_reviews()) == 1
+
+
+def test_demand_spike_uses_percentage_stated_in_message():
+    result = post(
+        "Demand spike: Biscuits small carton ke open orders rise by 60 percent hone ki expectation hai.",
+        sender_type="sales_rep",
+        sender_id=None,
+        language="Hinglish",
+        conversation_id="c-demand-uplift",
+    )
+
+    assert result["routed_action"] == "demand_spike_planning"
+    assert result["question"] is None
+    assert result["event"]["inferences"]["catalogue_sku_id"] == "SKU-006"
+    assert result["result"]["selected_plan"] is not None
+    assert result["result"]["verification"]["valid"] is True
+
+
+def test_selected_supplier_account_supplies_id_omitted_from_message():
+    result = post(
+        "Cooking oil 1 L pouch ki delivery mein two-day delay hai; revised date confirmed nahi hai.",
+        sender_type="supplier",
+        sender_id="SUP-005",
+        language="Hinglish",
+        conversation_id="c-sender-identity",
+    )
+
+    assert result["routed_action"] == "supplier_delay_planning"
+    assert result["question"] is None
+    assert result["recommendation"]["review_status"] == "pending_review"
+    assert result["result"]["selected_plan"] is not None
+    assert result["result"]["verification"]["valid"] is True
+    assert ledger.pending_reviews()[0]["why"] is not None
+
+
+def test_missing_supplier_account_and_text_id_asks_for_supplier_reference():
+    result = post(
+        "Cooking oil 1 L pouch has a two-day delay.",
+        sender_type="supplier",
+        sender_id=None,
+        conversation_id="c-missing-supplier",
+    )
+
+    assert result["routed_action"] == "slot_question"
+    assert result["question"] == "Which supplier reference is this about?"
+    assert result["completion_ack"] is None
 
 
 def test_review_item_explains_the_trade_off():
@@ -108,6 +154,52 @@ def test_missing_slot_triggers_one_question_then_completes():
     assert second["event"]["source_message_ids"]
 
 
+def test_product_pack_variation_completes_clarification():
+    post(
+        "SUP-005 reports a two-day delay; revised date is not confirmed.",
+        sender_type="supplier",
+        sender_id="SUP-005",
+        conversation_id="c-product-variation",
+    )
+
+    result = post(
+        "Cooking oil 1 L product is effected",
+        sender_type="supplier",
+        sender_id="SUP-005",
+        conversation_id="c-product-variation",
+    )
+
+    assert result["routed_action"] == "supplier_delay_planning"
+    assert result["question"] is None
+    assert result["event"]["inferences"]["catalogue_sku_id"] == "SKU-003"
+
+
+def test_ambiguous_product_question_lists_filtered_options_and_accepts_selection():
+    first = post(
+        "SUP-005 reports a two-day delay for Cooking oil.",
+        sender_type="supplier",
+        sender_id="SUP-005",
+        conversation_id="c-product-options",
+    )
+
+    assert first["routed_action"] == "slot_question"
+    assert "Reply with one option:" in first["question"]
+    assert "Cooking oil 1 L pouch" in first["question"]
+    assert "Cooking oil 5 L tin" in first["question"]
+    assert "Rice 10 kg bag" not in first["question"]
+
+    second = post(
+        "Cooking oil 5 L tin",
+        sender_type="supplier",
+        sender_id="SUP-005",
+        conversation_id="c-product-options",
+    )
+
+    assert second["routed_action"] == "supplier_delay_planning"
+    assert second["question"] is None
+    assert second["event"]["inferences"]["catalogue_sku_id"] == "SKU-004"
+
+
 def test_two_missing_slots_are_asked_in_separate_turns():
     first = post(
         "SUP-005 reports that delivery is late.",
@@ -138,6 +230,22 @@ def test_two_missing_slots_are_asked_in_separate_turns():
 
     assert third["routed_action"] == "supplier_delay_planning"
     assert third["recommendation"]["review_status"] == "pending_review"
+
+
+@pytest.mark.parametrize(("prior_rounds", "expected_action"), [(3, "slot_question"), (4, "human_triage")])
+def test_four_clarification_rounds_are_allowed_before_human_triage(prior_rounds, expected_action):
+    ledger.open_intake("c-cap", "previous-message", "SUP-005 reports that delivery is late.", prior_rounds)
+
+    result = post(
+        "SUP-005 reports that delivery is late.",
+        sender_type="supplier",
+        sender_id="SUP-005",
+        conversation_id="c-cap",
+    )
+
+    assert result["rounds"] == prior_rounds
+    assert result["routed_action"] == expected_action
+    assert (result["question"] is not None) is (prior_rounds < 4)
 
 
 def test_retailer_cannot_report_a_supplier_delay():
@@ -199,14 +307,20 @@ def test_human_review_decision_clears_the_queue():
 def test_only_implemented_intents_have_handlers():
     assert registered_intents() == (
         "baseline",
+        "batch_recall",
         "combined_disruption",
         "competitor_observation",
+        "credit_check",
         "damaged_item",
         "delivery_complaint",
+        "delivery_discrepancy",
         "demand_spike",
+        "dispatch_planning",
         "limited_cash",
         "missing_item",
         "product_request",
+        "scheme_claim",
+        "short_dated_stock",
         "stock_discrepancy",
         "supplier_delay",
     )
@@ -239,11 +353,77 @@ def test_evidence_that_is_not_verbatim_is_dropped():
     assert extraction.facts[1].span_start == message.text.index("two-day")
 
 
+def test_validation_recovers_uplift_omitted_by_model():
+    text = "Demand spike: Biscuits small carton ke open orders rise by 60 percent hone ki expectation hai."
+    message = MessageSubmission(
+        message_id="m-demand-uplift",
+        source_type="sales_visit",
+        text=text,
+        observed_at="2026-11-01T09:00:00+05:30",
+        state_version=STATE_VERSION,
+    )
+    extraction = Extraction(
+        intents=[IntentMatch(intent="demand_spike", confidence=0.9)],
+        facts=[EvidenceFact(field="product", value="Biscuits small carton", evidence_span="Biscuits small carton")],
+        mode="llm",
+    )
+
+    violations = validate_extraction(extraction, message, load_business_state(expected_version=STATE_VERSION))
+    uplift = extraction.fact("demand_uplift_percent")
+
+    assert violations == []
+    assert uplift is not None
+    assert uplift.value == "60"
+    assert uplift.evidence_span == "60"
+    assert text[uplift.span_start:uplift.span_end] == "60"
+    assert extraction.inferences["catalogue_sku_id"] == "SKU-006"
+
+
 def test_ambiguous_product_never_gets_a_sku():
     state = load_business_state(expected_version=STATE_VERSION)
 
     assert resolve_product(state, "Rice") is None
+    assert resolve_product(state, "Cooking oil") is None
     assert resolve_product(state, "Cooking oil 1 L pouch")["sku_id"] == "SKU-003"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected_sku"),
+    [
+        ("Cooking oil 1 L product is effected", "SKU-003"),
+        ("Cooking oil 1L", "SKU-003"),
+        ("1 litre Cooking oil", "SKU-003"),
+        ("Rice 10 kg", "SKU-002"),
+    ],
+)
+def test_unique_product_and_pack_size_variations_resolve(text, expected_sku):
+    state = load_business_state(expected_version=STATE_VERSION)
+
+    assert resolve_product(state, text)["sku_id"] == expected_sku
+
+
+@pytest.mark.parametrize("text", ["pouch", "Cooking oil 3 L", "Rice 10 kg and Rice 5 kg"])
+def test_incomplete_or_ambiguous_pack_variations_do_not_resolve(text):
+    state = load_business_state(expected_version=STATE_VERSION)
+
+    assert resolve_product(state, text) is None
+
+
+def test_product_options_use_category_size_and_supplier_availability():
+    state = load_business_state(expected_version=STATE_VERSION)
+
+    assert product_clarification_options(state, "Cooking oil", "SUP-005") == [
+        "Cooking oil 1 L pouch",
+        "Cooking oil 5 L tin",
+    ]
+    assert product_clarification_options(state, "Cooking oil", "SUP-004") == [
+        "Cooking oil 5 L tin"
+    ]
+    assert product_clarification_options(state, "Cooking oil 1 L", "SUP-005") == [
+        "Cooking oil 1 L pouch"
+    ]
+    assert product_clarification_options(state, "Cooking oil 3 L", "SUP-005") == []
+    assert product_clarification_options(state, "delivery is late", "SUP-005") == []
 
 
 def test_the_decision_pipeline_is_graph_backed():

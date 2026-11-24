@@ -7,10 +7,10 @@
     "message_id": "DEMO-SCN-003-001",
     "source_type": "supplier_update",
     "text": "Sri Venkateswara FMCG Supply reports a two-day delay for Cooking oil 1 L pouch; revised date is not confirmed.",
-    "observed_at": "2026-11-01T09:00:00+05:30",
+    "observed_at": "2026-11-23T09:00:00+05:30",
     "language": "English",
     "consent_status": "synthetic",
-    "state_version": "synthetic-v2-seed-20261105",
+    "state_version": "synthetic-v3-live-20261123",
     "sender": {
       "party_type": "supplier",
       "party_id": "SUP-005",
@@ -21,14 +21,14 @@
     "original_supplier_id": "SUP-005",
     "supplier_delay_days": 2,
     "delayed_incoming_units": 12,
-    "planning_horizon": "2026-11-04",
+    "planning_horizon": "2026-11-26",
     "procurement_costs": "immediate_outflow"
   },
   "assumptions": {
     "sku_id": "SKU-003",
     "original_supplier_id": "SUP-005",
     "delayed_incoming_units": 12,
-    "planning_horizon": "2026-11-04",
+    "planning_horizon": "2026-11-26",
     "procurement_costs": "immediate_outflow"
   },
   "unknowns": [
@@ -46,7 +46,7 @@
     "late_units": 28,
     "unmet_units": 0,
     "total_cost_rupees": "4876.46",
-    "scenario_arrival_date": "2026-11-03",
+    "scenario_arrival_date": "2026-11-25",
     "ending_cash_rupees": "245123.54",
     "headroom_rupees": "195123.54",
     "verification_valid": true

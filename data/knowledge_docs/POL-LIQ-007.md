@@ -8,7 +8,7 @@ effective_from: 2026-11-15
 supersedes: none
 owner: Finance Operations
 classification: synthetic
-parties: SUP-002, SUP-003, SUP-005
+parties: all
 skus: all
 licence: CC0-1.0 (synthetic text authored for this BharatBiz capstone)
 source_url: none
@@ -36,7 +36,7 @@ This policy controls whether a simulated fulfilment or procurement plan can be f
 
 **R2 - Count the full immediate outflow.** Expected retailer receipts, uncertain collections and unapproved credit are not netted against procurement cost.
 
-**R3 - Exclude breaches.** A plan with negative liquidity headroom is removed before ranking and cannot be approved as a costly alternative.
+**R3 - Exclude breaches.** A plan with negative liquidity headroom is removed before recommendation and cannot be sent to the model or reviewer as an eligible alternative.
 
 **R4 - Show the calculation.** Review cards display opening cash, outflow, ending cash, minimum buffer and headroom.
 

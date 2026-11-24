@@ -6,10 +6,12 @@ from typing import TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from app.extraction.base import Extraction
+from app.extraction.rules import product_clarification_options
 from app.orchestration import router
 from app.orchestration.acks import ack_text, language_key
 from app.orchestration.retail import persist_retail
 from app.orchestration.review import build_review_context
+from app.observability import trace_scope
 from app.orchestration.slots import SLOT_SPECS, missing_slots, next_question
 from app.orchestration.taxonomy import UNCLASSIFIED
 from app.orchestration.workflow import PlanState, plan_graph
@@ -70,6 +72,7 @@ def _queue_record(result: dict, routed_action: str) -> dict:
         or f"Awaiting human review: {event.get('event_type', UNCLASSIFIED)}",
         "recommendation_status": recommendation.get("review_status"),
         "mode": result.get("mode", "rules_mock"),
+        "decision_mode": result.get("decision_mode", "deterministic"),
         "state_version": event.get("state_version"),
         "case_id": (result.get("retail_context") or {}).get("case_id"),
         "draft_id": (result.get("retail_context") or {}).get("draft_id"),
@@ -134,6 +137,15 @@ def _slot_gate(flow: InboundState) -> dict:
 
     question = None
     if missing and spec is not None and rounds < spec.max_rounds:
+        product_options = None
+        if "product" in missing:
+            supplier_fact = extraction.fact("supplier_id")
+            supplier_id = supplier_fact.value if supplier_fact else (
+                message.sender.party_id if message.sender and party_type == "supplier" else None
+            )
+            product_options = product_clarification_options(
+                flow["business_state"], flow["submission"].text, supplier_id
+            )
         question = next_question(
             intent,
             extraction,
@@ -141,6 +153,7 @@ def _slot_gate(flow: InboundState) -> dict:
             message.language,
             available=available,
             additional_missing=additional_missing,
+            product_options=product_options,
         )
         if additional_missing:
             question = result.get("question") or question
@@ -165,6 +178,7 @@ def _slot_gate(flow: InboundState) -> dict:
         question=question,
         recommendation=result.get("recommendation"),
         mode=result.get("mode", "rules_mock"),
+        decision_mode=result.get("decision_mode", "deterministic"),
         rounds=rounds,
     ).model_dump(mode="json")
     payload["result"] = result
@@ -262,19 +276,27 @@ def process_inbound(
     data_dir: Path | None = None,
     scenario: ScenarioFixture | None = None,
     retail_store: RetailStore = default_retail_store,
+    decision_mode: str = "deterministic",
 ) -> dict:
     """Run one inbound message through the graph. Failures are acknowledged and triaged, never dropped."""
-    try:
-        output = inbound_graph.invoke(
-            {
-                "original": message,
-                "ledger": ledger,
-                "retail_store": retail_store,
-                "data_dir": data_dir,
-                "scenario": scenario,
-                "duplicate": False,
-            }
-        )
-    except (StateVersionMismatch, StateLoadError) as exc:
-        return _record_processing_error(message, exc, ledger)
+    conversation_id = message.conversation_id or message.message_id
+    with trace_scope(
+        f"inbound:{conversation_id}",
+        scenario_id=scenario.scenario_id if scenario else None,
+        source="inbound",
+    ):
+        try:
+            output = inbound_graph.invoke(
+                {
+                    "original": message,
+                    "ledger": ledger,
+                    "retail_store": retail_store,
+                    "data_dir": data_dir,
+                    "scenario": scenario,
+                    "decision_mode": decision_mode,
+                    "duplicate": False,
+                }
+            )
+        except (StateVersionMismatch, StateLoadError) as exc:
+            return _record_processing_error(message, exc, ledger)
     return output["payload"]

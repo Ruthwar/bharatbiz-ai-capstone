@@ -1,0 +1,7 @@
+route_id,order_id,retailer_id,sku_id,quantity_units,unit,priority,promised_date,source_type
+RTE-001,ORD-0001,RET-017,SKU-003,17,litre,normal,2026-11-24,synthetic
+RTE-001,ORD-0006,RET-019,SKU-003,21,litre,normal,2026-11-25,synthetic
+RTE-001,ORD-0018,RET-013,SKU-003,9,litre,normal,2026-11-24,synthetic
+RTE-002,ORD-0019,RET-019,SKU-003,10,litre,normal,2026-11-24,synthetic
+RTE-002,ORD-0023,RET-002,SKU-003,27,litre,normal,2026-11-24,synthetic
+RTE-002,ORD-0028,RET-001,SKU-003,18,litre,normal,2026-11-26,synthetic

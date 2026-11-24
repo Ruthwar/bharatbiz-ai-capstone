@@ -61,7 +61,7 @@ Running SCN-003 through the workflow and building the review context:
 | References shown | 3 |
 | With document id, effective date and licence | 3 / 3 |
 | With a non-empty verbatim quote | 3 / 3 |
-| In force on the scenario date (2026-11-01) | 3 / 3 |
+| In force on the scenario date (2026-11-23) | 3 / 3 |
 | Documents | POL-DLY-001, POL-CSH-002, CASE-2026-014 |
 
 ### Citation-to-decision mapping

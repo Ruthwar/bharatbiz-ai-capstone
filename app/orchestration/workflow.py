@@ -9,16 +9,20 @@ from langgraph.graph import END, START, StateGraph
 from app.agents.inventory import analyze_inventory
 from app.agents.orders import analyze_orders
 from app.agents.supplier import build_supplier_options
+from app.decision import recommend_plan
 from app.extraction import configured_extractor, validate_extraction
-from app.extraction.base import Extraction
+from app.extraction.base import Extraction, Extractor
 from app.extraction.llm import ExtractionError
 from app.extraction.rules import RulesExtractor
-from app.optimization.baseline import build_candidate_plans, select_best_plan
+from app.observability import record_span, trace_scope
+from app.optimization.baseline import build_candidate_plans
 from app.orchestration import router
 from app.orchestration.taxonomy import TAXONOMY_VERSION, UNCLASSIFIED
+from app.scenarios.advisory import run_advisory_scenario
 from app.scenarios.cases import run_case_scenario
 from app.scenarios.contracts import ScenarioFixture
 from app.scenarios.market import run_competitor_observation, run_product_request
+from app.units import format_units
 from app.scenarios.operational import run_operational_scenario
 from app.schemas.contracts import (
     BusinessEvent,
@@ -37,9 +41,11 @@ class PlanState(TypedDict, total=False):
     submission: MessageSubmission
     data_dir: Path | None
     business_state: BusinessState
+    extractor: Extractor
     extraction: Extraction
     event: BusinessEvent
     scenario: ScenarioFixture | None
+    decision_mode: str
     authorized: bool
     auth_reason: str
     result: dict
@@ -58,6 +64,12 @@ ALLOWED_SENDERS: dict[str, tuple[str, ...]] = {
     "missing_item": ("retailer",),
     "product_request": ("retailer",),
     "competitor_observation": ("sales_rep",),
+    "credit_check": ("retailer",),
+    "scheme_claim": ("retailer",),
+    "delivery_discrepancy": ("retailer",),
+    "batch_recall": ("supplier",),
+    "short_dated_stock": ("sales_rep",),
+    "dispatch_planning": ("sales_rep",),
 }
 REPORTED_PARTY_FACT: dict[str, str] = {
     "supplier_delay": "supplier_id",
@@ -65,6 +77,10 @@ REPORTED_PARTY_FACT: dict[str, str] = {
     "damaged_item": "retailer_id",
     "missing_item": "retailer_id",
     "product_request": "retailer_id",
+    "credit_check": "retailer_id",
+    "scheme_claim": "retailer_id",
+    "delivery_discrepancy": "retailer_id",
+    "batch_recall": "supplier_id",
 }
 
 
@@ -83,8 +99,8 @@ def _fact(field: str, value: str, text: str, start: int, end: int) -> EvidenceFa
     )
 
 
-def _extract(message: MessageSubmission, state: BusinessState) -> Extraction:
-    extractor = configured_extractor()
+def _extract(message: MessageSubmission, state: BusinessState, extractor: Extractor | None = None) -> Extraction:
+    extractor = extractor or configured_extractor()
     if extractor.name == "rules":
         extraction = extractor.extract(message, state)
         validate_extraction(extraction, message, state)
@@ -102,6 +118,14 @@ def _extract(message: MessageSubmission, state: BusinessState) -> Extraction:
             extractor.name,
             message.message_id,
             type(exc).__name__,
+        )
+        record_span(
+            "extraction_fallback",
+            "fallback",
+            provider=extractor.name,
+            model=getattr(extractor, "model", None),
+            status="fallback",
+            detail={"reason": type(exc).__name__, "message_id": message.message_id},
         )
         fallback = RulesExtractor().extract(message, state)
         validate_extraction(fallback, message, state)
@@ -141,6 +165,7 @@ def _clarification_response(
     return {
         "message": message.model_dump(mode="json"),
         "event": event.model_dump(mode="json"),
+        "review_kind": "clarification",
         "recommendation": recommendation.model_dump(mode="json"),
         "candidate_plans": [],
         "selected_plan": None,
@@ -157,16 +182,20 @@ def _process_supplier_delay(
     state: BusinessState,
     data_dir: Path | None = None,
     scenario: ScenarioFixture | None = None,
+    decision_mode: str = "deterministic",
 ) -> dict:
     if scenario is not None:
-        return run_operational_scenario(message, event, extraction, state, scenario)
+        return run_operational_scenario(message, event, extraction, state, scenario, decision_mode)
     supplier_fact = extraction.fact("supplier_id")
+    supplier_id = supplier_fact.value if supplier_fact else (
+        message.sender.party_id if message.sender and message.sender.party_type == "supplier" else None
+    )
     delay_fact = extraction.fact("delay_days")
     sku_id = extraction.inferences.get("catalogue_sku_id")
     product_row = next((row for row in state.products if row["sku_id"] == sku_id), None)
 
     missing = []
-    if not supplier_fact:
+    if not supplier_id:
         missing.append("supplier reference")
     if not delay_fact:
         missing.append("delay duration")
@@ -180,7 +209,6 @@ def _process_supplier_delay(
             "Unable to resolve " + ", ".join(missing) + " from the source and synthetic catalogue.",
         )
 
-    supplier_id = supplier_fact.value
     supplier_label = next(
         (
             f"{row['supplier_name']} ({supplier_id})"
@@ -209,7 +237,7 @@ def _process_supplier_delay(
     )
     event.inferences["scenario_planning_horizon"] = planning_horizon.isoformat()
     event.inferences["delayed_incoming_assumption"] = (
-        f"{delayed_incoming_units} {unit} units from {supplier_label}"
+        f"{format_units(delayed_incoming_units, unit)} from {supplier_label}"
     )
 
     required_units = max(
@@ -231,64 +259,115 @@ def _process_supplier_delay(
         supplier_options,
         planning_horizon,
     )
-    selected = select_best_plan(candidates)
-    verification = verify_plan(state, selected, inventory.proposal["immediately_available_units"])
+    candidate_verifications = {
+        plan.candidate_id: verify_plan(state, plan, inventory.proposal["immediately_available_units"])
+        for plan in candidates
+    }
+    eligible_candidates = [plan for plan in candidates if candidate_verifications[plan.candidate_id].valid]
+    failed_candidates = [plan for plan in candidates if not candidate_verifications[plan.candidate_id].valid]
+    selected, decision_record = recommend_plan(
+        decision_mode,
+        eligible_candidates,
+        message,
+        event.model_dump(mode="json"),
+        supplier_id,
+        message.observed_at.date(),
+    )
+    verification = candidate_verifications[selected.candidate_id] if selected else None
+    if selected is None and decision_record.get("abstain_reason"):
+        event.uncertainties.append(decision_record["abstain_reason"])
 
     assumptions = inventory.assumptions + [
         "Scenario arrival dates are planning estimates, not supplier-confirmed commitments.",
         "Candidate procurement costs are immediate outflows with no additional inflows assumed.",
     ]
     warnings = []
-    if selected.late_units:
-        warnings.append(f"{selected.late_units} {unit} units remain late in the selected plan.")
-    if selected.unmet_units:
-        warnings.append(f"{selected.unmet_units} {unit} units remain unmet in the selected plan.")
-    if not verification.valid:
+    if selected and selected.late_units:
+        warnings.append(f"{format_units(selected.late_units, unit)} remain late in the selected plan.")
+    if selected and selected.unmet_units:
+        warnings.append(f"{format_units(selected.unmet_units, unit)} remain unmet in the selected plan.")
+    if verification and not verification.valid:
         warnings.extend(verification.violations)
+    if selected is None:
+        for plan in failed_candidates:
+            for violation in candidate_verifications[plan.candidate_id].violations:
+                if violation not in warnings:
+                    warnings.append(violation)
 
-    if selected.supplier_option:
+    if selected is None:
+        mode_label = "Policy-grounded LLM" if decision_mode == "policy_grounded_llm" else "Deterministic"
+        summary = f"{mode_label} mode returned no verified eligible recommendation. Human review is required."
+    elif selected.supplier_option:
         option = selected.supplier_option
         option_label = (
             f"{option.supplier_name} ({option.supplier_id})" if option.supplier_name else option.supplier_id
         )
+        quantity_label = format_units(option.quantity_units, unit)
+        fulfilment = (
+            "all requested"
+            if selected.unmet_units == 0
+            else f"{selected.fulfilled_units} of {selected.total_requested_units} requested"
+        )
         summary = (
-            f"Recommended scenario option: {option.quantity_units} {unit} units from "
-            f"{option_label}; {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
-            f"{selected.late_units} late, {selected.unmet_units} unmet. Awaiting human review."
+            f"Recommended option: buy {quantity_label} from {option_label}. It fulfils {fulfilment} units, "
+            f"with {selected.late_units} arriving after the promised date and {selected.unmet_units} unfilled. "
+            "Awaiting human review."
         )
     else:
+        fulfilment = (
+            "all requested"
+            if selected.unmet_units == 0
+            else f"{selected.fulfilled_units} of {selected.total_requested_units} requested"
+        )
         summary = (
-            f"Use available stock: {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
-            f"{selected.late_units} late, {selected.unmet_units} unmet. Awaiting human review."
+            f"Stock alone fulfils {fulfilment} units, with {selected.late_units} arriving after the promised "
+            f"date and {selected.unmet_units} unfilled. Awaiting human review."
         )
 
     recommendation = Recommendation(
-        recommendation_id=_stable_id("rec", event.event_id, selected.candidate_id),
+        recommendation_id=_stable_id("rec", event.event_id, selected.candidate_id if selected else decision_mode),
         state_version=state.state_version,
         summary=summary,
         evidence_refs=[message.message_id, state.state_version],
         assumptions=assumptions,
         warnings=warnings,
-        review_status="pending_review" if verification.valid else "needs_clarification",
+        review_status="pending_review" if verification and verification.valid else "needs_clarification",
     )
+    trace = [
+        "received",
+        "state_loaded",
+        "event_extracted",
+        "specialists_completed",
+        "candidates_optimized",
+        "candidate_plans_verified",
+    ]
+    if selected is None:
+        trace.append("verification_failed" if candidates and not eligible_candidates else "decision_abstained")
+    else:
+        trace.append("decision_recommended")
+        trace.append("pending_human_review" if verification and verification.valid else "verification_failed")
     return {
         "message": message.model_dump(mode="json"),
         "event": event.model_dump(mode="json"),
+        "review_kind": "operational_plan",
         "agent_results": [inventory.model_dump(mode="json"), orders.model_dump(mode="json")],
         "supplier_options": [option.model_dump(mode="json") for option in supplier_options],
         "candidate_plans": [plan.model_dump(mode="json") for plan in candidates],
-        "selected_plan": selected.model_dump(mode="json"),
-        "verification": verification.model_dump(mode="json"),
-        "recommendation": recommendation.model_dump(mode="json"),
-        "trace": [
-            "received",
-            "state_loaded",
-            "event_extracted",
-            "specialists_completed",
-            "candidates_optimized",
-            "independently_verified",
-            "pending_human_review",
+        "excluded_candidates": [
+            {
+                "candidate_id": plan.candidate_id,
+                "supplier_id": plan.supplier_option.supplier_id if plan.supplier_option else None,
+                "reasons": list(candidate_verifications[plan.candidate_id].violations),
+                "details": {"verification": "failed"},
+            }
+            for plan in failed_candidates
         ],
+        "selected_plan": selected.model_dump(mode="json") if selected else None,
+        "verification": verification.model_dump(mode="json") if verification else None,
+        "decision": decision_record,
+        "decision_mode": decision_mode,
+        "recommendation": recommendation.model_dump(mode="json"),
+        "trace": trace,
         "mode": extraction.mode,
     }
 
@@ -306,6 +385,7 @@ def _event_only(message: MessageSubmission, event: BusinessEvent, extraction: Ex
     return {
         "message": message.model_dump(mode="json"),
         "event": event.model_dump(mode="json"),
+        "review_kind": "triage",
         "trace": ["received", "state_loaded", "event_extracted", "routed_to_triage"],
         "mode": extraction.mode,
     }
@@ -318,8 +398,9 @@ def _process_operational_scenario(
     state: BusinessState,
     data_dir: Path | None = None,
     scenario: ScenarioFixture | None = None,
+    decision_mode: str = "deterministic",
 ) -> dict:
-    return run_operational_scenario(message, event, extraction, state, scenario)
+    return run_operational_scenario(message, event, extraction, state, scenario, decision_mode)
 
 
 def _process_case_scenario(
@@ -329,6 +410,7 @@ def _process_case_scenario(
     state: BusinessState,
     data_dir: Path | None = None,
     scenario: ScenarioFixture | None = None,
+    decision_mode: str = "deterministic",
 ) -> dict:
     return run_case_scenario(message, event, extraction, state, scenario)
 
@@ -340,6 +422,7 @@ def _process_competitor_observation(
     state: BusinessState,
     data_dir: Path | None = None,
     scenario: ScenarioFixture | None = None,
+    decision_mode: str = "deterministic",
 ) -> dict:
     return run_competitor_observation(message, event, extraction, state, scenario)
 
@@ -351,14 +434,36 @@ def _process_product_request(
     state: BusinessState,
     data_dir: Path | None = None,
     scenario: ScenarioFixture | None = None,
+    decision_mode: str = "deterministic",
 ) -> dict:
     return run_product_request(message, event, extraction, state, scenario)
+
+
+def _process_advisory_scenario(
+    message: MessageSubmission,
+    event: BusinessEvent,
+    extraction: Extraction,
+    state: BusinessState,
+    data_dir: Path | None = None,
+    scenario: ScenarioFixture | None = None,
+    decision_mode: str = "deterministic",
+) -> dict:
+    return run_advisory_scenario(message, event, extraction, state, scenario, data_dir, decision_mode)
 
 
 for intent in ("baseline", "demand_spike", "limited_cash", "stock_discrepancy", "combined_disruption"):
     router.register(intent, _process_operational_scenario)
 for intent in ("delivery_complaint", "damaged_item", "missing_item"):
     router.register(intent, _process_case_scenario)
+for intent in (
+    "credit_check",
+    "scheme_claim",
+    "delivery_discrepancy",
+    "batch_recall",
+    "short_dated_stock",
+    "dispatch_planning",
+):
+    router.register(intent, _process_advisory_scenario)
 router.register("supplier_delay", _process_supplier_delay)
 router.register("competitor_observation", _process_competitor_observation)
 router.register("product_request", _process_product_request)
@@ -374,7 +479,7 @@ def _load_state(flow: PlanState) -> dict:
 
 
 def _extract_node(flow: PlanState) -> dict:
-    return {"extraction": _extract(flow["submission"], flow["business_state"])}
+    return {"extraction": _extract(flow["submission"], flow["business_state"], flow.get("extractor"))}
 
 
 def _build_event_node(flow: PlanState) -> dict:
@@ -429,6 +534,7 @@ def _plan_node(flow: PlanState) -> dict:
             flow["business_state"],
             flow.get("data_dir"),
             flow.get("scenario"),
+            flow.get("decision_mode", "deterministic"),
         )
     }
 
@@ -479,6 +585,8 @@ def _review_gate(flow: PlanState) -> dict:
 
 def _finalize(flow: PlanState) -> dict:
     result = dict(flow["result"])
+    result.setdefault("decision_mode", flow.get("decision_mode", "deterministic"))
+    result.setdefault("decision_mode_applied", result.get("review_kind") == "operational_plan")
     if flow.get("authorized") is False:
         result["routed_action"] = "human_triage"
     else:
@@ -517,6 +625,21 @@ def process_message(
     message: MessageSubmission,
     data_dir: Path | None = None,
     scenario: ScenarioFixture | None = None,
+    extractor: Extractor | None = None,
+    decision_mode: str = "deterministic",
 ) -> dict:
-    output = plan_graph.invoke({"submission": message, "data_dir": data_dir, "scenario": scenario})
+    with trace_scope(
+        f"message:{message.message_id}",
+        scenario_id=scenario.scenario_id if scenario else None,
+        source="message",
+    ):
+        output = plan_graph.invoke(
+            {
+                "submission": message,
+                "data_dir": data_dir,
+                "scenario": scenario,
+                "extractor": extractor,
+                "decision_mode": decision_mode,
+            }
+        )
     return output["result"]

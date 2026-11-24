@@ -11,10 +11,12 @@ import hashlib
 import os
 import re
 import sqlite3
+import time
 from datetime import date
 from pathlib import Path
 from typing import Iterable, Sequence
 
+from app.observability import record_retrieval
 from app.rag.corpus import DEFAULT_CORPUS_DIR, Document, load_documents
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -54,6 +56,14 @@ def _match_expression(tokens: Sequence[str]) -> str:
 
 
 _SENTENCE = re.compile(r"(?<=[.!?])\s+")
+
+
+def party_allows(parties: str, supplier_id: str | None) -> bool:
+    """Party metadata uses comma-separated ids; "all" and "RET-all" apply universally to the decision."""
+    if not supplier_id:
+        return True
+    declared = {part.strip() for part in parties.split(",") if part.strip()}
+    return bool(declared & {"all", "RET-all"}) or supplier_id in declared
 
 
 def best_quote(text: str, tokens: Sequence[str], limit: int = 320) -> str:
@@ -151,6 +161,67 @@ class RagIndex:
     def documents(self) -> list[Document]:
         return load_documents(self.corpus_dir)
 
+    def document_meta(self, document_id: str) -> dict | None:
+        """Frontmatter metadata for one approved document, read from the current index."""
+        self.ensure()
+        conn = self._connect()
+        try:
+            row = conn.execute(
+                "SELECT document_id, title, doc_type, version, effective_from, status, licence, "
+                "source_url, retrieved_on, parties, classification "
+                "FROM sections WHERE document_id = ? LIMIT 1",
+                (document_id,),
+            ).fetchone()
+        finally:
+            self._release(conn)
+        if row is None:
+            return None
+        keys = (
+            "document_id", "title", "doc_type", "version", "effective_from", "status",
+            "licence", "source_url", "retrieved_on", "parties", "classification",
+        )
+        return dict(zip(keys, row))
+
+    def document_section(self, document_id: str, limit: int = 320) -> dict | None:
+        """One representative section for a mandatory document that BM25 did not surface."""
+        self.ensure()
+        conn = self._connect()
+        try:
+            rows = conn.execute(
+                "SELECT section_id, heading, body, title, doc_type, version, effective_from, status, "
+                "licence, source_url, retrieved_on, parties, classification "
+                "FROM sections WHERE document_id = ?",
+                (document_id,),
+            ).fetchall()
+        finally:
+            self._release(conn)
+        if not rows:
+            return None
+        keys = (
+            "section_id", "heading", "text", "title", "doc_type", "version", "effective_from",
+            "status", "licence", "source_url", "retrieved_on", "parties", "classification",
+        )
+        records = [dict(zip(keys, row)) for row in rows]
+
+        def rank(record: dict) -> int:
+            heading = (record["heading"] or "").lower()
+            if heading == "rules":
+                return 0
+            return 1 if "rule" in heading else 2
+
+        record = sorted(records, key=rank)[0]
+        text = record.pop("text")
+        quote = text if len(text) <= limit else text[:limit].rsplit(" ", 1)[0] + "…"
+        return {
+            **record,
+            "document_id": document_id,
+            "text": text,
+            "quote": quote,
+            "source_url": record["source_url"] or None,
+            "retrieved_on": record["retrieved_on"] or None,
+            "score": 0.0,
+        }
+
     def search(
         self,
         query: str,
@@ -190,8 +261,7 @@ class RagIndex:
                 continue
             if wanted and record["doc_type"] not in wanted:
                 continue
-            parties = record["parties"]
-            if supplier_id and "all" not in parties and supplier_id not in parties:
+            if not party_allows(record["parties"], supplier_id):
                 continue
             if as_of and record["effective_from"] > as_of.isoformat():
                 continue
@@ -238,4 +308,21 @@ def retrieve(
     as_of: date | None = None,
 ) -> list[dict]:
     """Return up to `top_k` sections, best section per document, ranked by BM25."""
-    return get_index().search(query, top_k=top_k, doc_types=doc_types, supplier_id=supplier_id, as_of=as_of)
+    started = time.monotonic()
+    results = get_index().search(query, top_k=top_k, doc_types=doc_types, supplier_id=supplier_id, as_of=as_of)
+    record_retrieval(
+        query,
+        [row["document_id"] for row in results],
+        (time.monotonic() - started) * 1000,
+        top_k=top_k,
+        hits=len(results),
+    )
+    return results
+
+
+def document_meta(document_id: str) -> dict | None:
+    return get_index().document_meta(document_id)
+
+
+def document_section(document_id: str) -> dict | None:
+    return get_index().document_section(document_id)

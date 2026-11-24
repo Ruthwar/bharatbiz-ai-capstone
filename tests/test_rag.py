@@ -12,7 +12,7 @@ from app.schemas.contracts import MessageSubmission
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = json.loads((PROJECT_ROOT / "data" / "eval" / "golden_queries.json").read_text(encoding="utf-8"))
-SCENARIO_DATE = date(2026, 11, 1)
+SCENARIO_DATE = date(2026, 11, 23)
 
 
 @pytest.fixture(scope="module")
@@ -110,7 +110,7 @@ def test_golden_queries_meet_the_floor(index):
     assert reciprocal / total >= 0.78, f"MRR {reciprocal / total:.3f}"
 
 
-def test_review_card_gets_effective_citations():
+def test_review_card_gets_applicable_policy_basis():
     fixture = json.loads(
         (PROJECT_ROOT / "data" / "synthetic" / "scenario_fixtures" / "SCN-003.json").read_text(encoding="utf-8")
     )
@@ -119,13 +119,27 @@ def test_review_card_gets_effective_citations():
     references = context["references"]
 
     assert context["references_error"] is None
-    assert len(references) == 3
-    assert {"POL-DLY-001", "POL-CSH-002"} <= {reference["document_id"] for reference in references}
+    assert {reference["document_id"] for reference in references} == {
+        "POL-DEC-008",
+        "POL-SVC-009",
+        "POL-DLY-001",
+        "POL-CST-010",
+        "POL-CSH-002",
+        "POL-LIQ-007",
+    }
+    assert all(reference["relation"] == "in_force" for reference in references)
+    assert context["pending_policies"] == []
     for reference in references:
         assert reference["quote"]
         assert reference["effective_from"] <= SCENARIO_DATE.isoformat()
         assert reference["licence"]
         assert reference["source_url"] is None
+    assert context["operator_summary"].startswith("Across 6 open orders, 102 litre")
+    assert context["event_label"] == "Supplier delay"
+    assert [step["title"] for step in context["decision_steps"]][-2:] == [
+        "Plan selected",
+        "Waiting for a person",
+    ]
 
 
 def test_module_level_retrieve_reads_the_same_corpus(index):

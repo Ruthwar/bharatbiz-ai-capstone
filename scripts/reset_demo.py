@@ -6,6 +6,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.observability.traces import reset_traces
 from app.store.ledger import ledger
 from app.store.retail import retail_store
 
@@ -13,7 +14,8 @@ from app.store.retail import retail_store
 def main() -> int:
     ledger.reset()
     retail_store.reset()
-    print("Demo ledger and retail store cleared: no reviews, intakes, cases, drafts or observations.")
+    reset_traces()
+    print("Demo ledger, retail store and model traces cleared: no reviews, intakes, cases, drafts, observations or spans.")
     return 0
 
 

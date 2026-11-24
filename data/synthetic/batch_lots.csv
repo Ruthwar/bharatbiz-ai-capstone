@@ -1,0 +1,6 @@
+batch_id,sku_id,supplier_id,quantity_units,unit,manufactured_on,expiry_date,warehouse,supplier_return_window_days,status,source_type
+BATCH-001,SKU-009,SUP-005,120,kg,2026-09-01,2027-03-13,WH-01,30,released,synthetic
+BATCH-002,SKU-009,SUP-005,80,kg,2026-10-01,2026-12-02,WH-01,14,released,synthetic
+BATCH-003,SKU-003,SUP-002,140,litre,2026-08-15,2027-02-15,WH-02,14,released,synthetic
+BATCH-004,SKU-005,SUP-001,300,pieces,2026-10-20,2027-04-22,WH-01,21,quality_hold,synthetic
+BATCH-005,SKU-001,SUP-003,500,kg,2026-11-01,2027-05-02,WH-02,30,released,synthetic

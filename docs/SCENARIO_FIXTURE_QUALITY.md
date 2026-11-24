@@ -1,12 +1,12 @@
 # Scenario-fixture quality review
 
-Reviewed 2026-11-16 against the merged project. Fixture ownership remains with the scenario owner; this documentation update does not modify any fixture.
+Reviewed 2026-11-23 against the live-dated project. Fixture ownership remains with the scenario owner; this documentation update does not modify any fixture.
 
 ## Inventory
 
-- `data/synthetic/scenarios.csv` and `scenarios.json` contain eight stable benchmark definitions (`SCN-001` through `SCN-008`).
-- `data/synthetic/scenario_fixtures/` contains nine executable fixtures (`SCN-001` through `SCN-009`), including the additional smaller-pack request variant.
-- `python scripts/evaluate_scenarios.py` passes all nine fixtures: **9/9 passed**. Each fixture has a registered handler and scenario-specific expectations.
+- `data/synthetic/scenarios.csv` and `scenarios.json` contain fourteen stable benchmark definitions (`SCN-001` through `SCN-008`, plus `SCN-010` through `SCN-015`).
+- `data/synthetic/scenario_fixtures/` contains fifteen executable fixtures (`SCN-001` through `SCN-015`), including the additional smaller-pack request variant and six policy-review fixtures.
+- `python scripts/evaluate_scenarios.py` passes all fifteen fixtures: **15/15 passed**. Each fixture has a registered handler and scenario-specific expectations.
 
 ## SCN-003 checks
 
@@ -25,4 +25,4 @@ Reviewed 2026-11-16 against the merged project. Fixture ownership remains with t
 
 The fixture is suitable for the supplier-delay demonstration. Its unknowns correctly prevent the message from supplying an invented date, quantity or purchase-order reference. The fixture depends on the versioned state and should be re-reviewed whenever that state version changes.
 
-All nine fixtures now have handlers and pass the scenario evaluator. The eight base definitions in `scenarios.csv/json` remain unchanged; `SCN-009` is an additional executable variant. Fixture validation and scenario-specific assertions cover identity, state version, units, operational outcomes and review behavior.
+All fifteen fixtures now have handlers and pass the scenario evaluator. The fourteen base definitions in `scenarios.csv/json` cover the operational rules and the six advisory reviews; `SCN-009` is an additional executable variant. Fixture validation and scenario-specific assertions cover identity, state version, units, operational outcomes and review behavior.

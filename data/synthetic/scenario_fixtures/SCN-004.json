@@ -7,11 +7,14 @@
     "message_id": "DEMO-SCN-004-001",
     "source_type": "synthetic",
     "text": "Limited cash for Cooking oil 1 L pouch: RET-003 payment of 30000 rupees expected today is now delayed until 2026-11-08.",
-    "observed_at": "2026-11-01T09:00:00+05:30",
+    "observed_at": "2026-11-23T09:00:00+05:30",
     "language": "English",
     "consent_status": "synthetic",
-    "state_version": "synthetic-v2-seed-20261105",
-    "sender": {"party_type": "sales_rep", "channel": "api"}
+    "state_version": "synthetic-v3-live-20261123",
+    "sender": {
+      "party_type": "sales_rep",
+      "channel": "api"
+    }
   },
   "overlays": {
     "opening_cash_rupees": "50000.00",
@@ -20,11 +23,11 @@
         "receipt_id": "RCPT-SCN-004-001",
         "retailer_id": "RET-003",
         "amount_rupees": "30000.00",
-        "expected_date": "2026-11-01",
-        "actual_date": "2026-11-08"
+        "expected_date": "2026-11-23",
+        "actual_date": "2026-11-30"
       }
     ],
-    "planning_horizon": "2026-11-04",
+    "planning_horizon": "2026-11-26",
     "procurement_costs": "immediate_outflow"
   },
   "assumptions": {
@@ -32,7 +35,9 @@
     "minimum_cash_buffer_rupees": "50000.00",
     "procurement_costs": "immediate_outflow"
   },
-  "unknowns": ["retailer_confirmed_actual_payment_date"],
+  "unknowns": [
+    "retailer_confirmed_actual_payment_date"
+  ],
   "expected": {
     "review_status": "pending_review",
     "selected_candidate_id": "stock-only",

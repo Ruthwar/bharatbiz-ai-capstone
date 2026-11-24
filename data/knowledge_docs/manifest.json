@@ -1,8 +1,8 @@
 {
-  "corpus_version": "2026-11-15",
-  "document_count": 30,
-  "section_count": 186,
-  "total_bytes": 90712,
+  "corpus_version": "2026-11-23",
+  "document_count": 33,
+  "section_count": 203,
+  "total_bytes": 107084,
   "documents": [
     {
       "document_id": "CASE-2026-005",
@@ -84,9 +84,23 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "POL-CSH-002.md",
-      "bytes": 3593,
+      "bytes": 3606,
       "sections": 6,
-      "sha256": "5702629c892213d7fc153c0451395b8cba648bce74016dd5e5ca36816f2837e4"
+      "sha256": "e9229c1ea52d96e2182e2f415290a10b2f393fd31165eec278a13d15dbdca4bf"
+    },
+    {
+      "document_id": "POL-CST-010",
+      "title": "Procurement Cost Discipline Policy",
+      "doc_type": "policy",
+      "version": "1.0",
+      "effective_from": "2026-10-15",
+      "classification": "synthetic",
+      "source_url": null,
+      "retrieved_on": null,
+      "file": "POL-CST-010.md",
+      "bytes": 2622,
+      "sections": 5,
+      "sha256": "006f6ce03d4b77dd062ddb5ca6d9497a8dac195e7bb203d16a50ef5963374e45"
     },
     {
       "document_id": "POL-DAT-004",
@@ -103,6 +117,20 @@
       "sha256": "1c72924150c1c25223d59ab769d8d9da2d7409fbd7bfa35adcd25895f95de236"
     },
     {
+      "document_id": "POL-DEC-008",
+      "title": "Policy-Grounded Operational Recommendation Policy",
+      "doc_type": "policy",
+      "version": "1.1",
+      "effective_from": "2026-10-15",
+      "classification": "synthetic",
+      "source_url": null,
+      "retrieved_on": null,
+      "file": "POL-DEC-008.md",
+      "bytes": 8062,
+      "sections": 7,
+      "sha256": "39eb1263707498e5e84338b869c620d7bd20775c50f07401ffc6071fd64887b4"
+    },
+    {
       "document_id": "POL-DEM-007",
       "title": "Demand Simulation and Scenario Policy",
       "doc_type": "policy",
@@ -112,23 +140,23 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "POL-DEM-007.md",
-      "bytes": 3152,
+      "bytes": 3699,
       "sections": 7,
-      "sha256": "74bfa3515c6732d129819d12db8b3c5d2eb6ab0c2e8a3ac58dcb4c55c1b28e12"
+      "sha256": "a0a330f1eb8842c6034ebce306d47a1d39a75a13533a781dbb48535880c57f07"
     },
     {
       "document_id": "POL-DLY-001",
       "title": "Supplier Delay Handling Policy",
       "doc_type": "policy",
-      "version": "3.1",
-      "effective_from": "2026-04-01",
+      "version": "3.2",
+      "effective_from": "2026-10-15",
       "classification": "synthetic",
       "source_url": null,
       "retrieved_on": null,
       "file": "POL-DLY-001.md",
-      "bytes": 4819,
+      "bytes": 5898,
       "sections": 6,
-      "sha256": "2bfe16b32603fcd0e973f6201b87a0e5278584a6a2da71c1d6742e6a75ca7661"
+      "sha256": "30bfc7ba771e2a3ed8012c68c452232015b0d5a1e52008e53e3089b7273c2889"
     },
     {
       "document_id": "POL-LIQ-007",
@@ -140,9 +168,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "POL-LIQ-007.md",
-      "bytes": 2230,
+      "bytes": 2292,
       "sections": 6,
-      "sha256": "dbe6c8f8c2b5f0425324d84f32d0ddd8ba08556303fd84543f3569488f55b4d8"
+      "sha256": "c7a1d5ec67ceca64f7e75932e2a7388a37452afc7e60f6ad1782cb2a1982ead6"
     },
     {
       "document_id": "POL-MSC-007",
@@ -154,9 +182,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "POL-MSC-007.md",
-      "bytes": 2190,
+      "bytes": 2238,
       "sections": 5,
-      "sha256": "d991294cd66045001aef17ec526a6cd844f1a115d59c9a82903bb17071258596"
+      "sha256": "8b7704441a5e7f3608ad4aa28b3a4b95bc0b57d7bd7750a64fc427ae14b04f42"
     },
     {
       "document_id": "POL-PRC-005",
@@ -182,9 +210,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "POL-RCM-007.md",
-      "bytes": 2231,
+      "bytes": 2279,
       "sections": 5,
-      "sha256": "3cbc1a5b2d18d31626e33e26ceccba46ce8f6cf573e692cb9fc99dc98d023e82"
+      "sha256": "67d343a58c697de1081f6ac67ec577e9ac5261b484eb3f424597810b9049d4a2"
     },
     {
       "document_id": "POL-STK-007",
@@ -196,9 +224,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "POL-STK-007.md",
-      "bytes": 2534,
+      "bytes": 2559,
       "sections": 6,
-      "sha256": "ec733de965ce96d09e9f4c43937c959eb063e10ca96eebfc60617b8af27349e6"
+      "sha256": "9d73afe688366528148071dc4142c0c4d63ac479a1b09c6b78ccf4c43ce51b13"
     },
     {
       "document_id": "POL-SUB-003",
@@ -213,6 +241,20 @@
       "bytes": 3209,
       "sections": 6,
       "sha256": "c05909496603cfef2744f6cb7da84d482f27cc0792a88576c60b1c43af4cf904"
+    },
+    {
+      "document_id": "POL-SVC-009",
+      "title": "Retailer Service Continuity Policy",
+      "doc_type": "policy",
+      "version": "1.0",
+      "effective_from": "2026-10-15",
+      "classification": "synthetic",
+      "source_url": null,
+      "retrieved_on": null,
+      "file": "POL-SVC-009.md",
+      "bytes": 2769,
+      "sections": 5,
+      "sha256": "ac33ffb943619fdd40472d467baed5118b894d8218fe36508508feb00c94d51e"
     },
     {
       "document_id": "REG-FSSAI-LAB-2020",
@@ -266,9 +308,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "SOP-DEM-007.md",
-      "bytes": 2040,
+      "bytes": 2089,
       "sections": 6,
-      "sha256": "070f82fa4ac2cf6f72acbb7417d2acf7215cab58522dc75c342db2f29f346b3e"
+      "sha256": "e86bb99b52e1495c8f84083e2d9e0ab680f46c65afbc62e14dde97889fa97dda"
     },
     {
       "document_id": "SOP-INT-001",
@@ -294,9 +336,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "SOP-LIQ-007.md",
-      "bytes": 1625,
+      "bytes": 1668,
       "sections": 5,
-      "sha256": "a72eabed7cc5accc035b11e110d2ab7f70a1f8924ec89f5ea9d50023926af093"
+      "sha256": "9d5087623a9cf0c6039b9c8b3311b99cf00cbca36ade1554fe399759a88c4080"
     },
     {
       "document_id": "SOP-MSC-007",
@@ -308,9 +350,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "SOP-MSC-007.md",
-      "bytes": 1953,
+      "bytes": 2000,
       "sections": 5,
-      "sha256": "dd6c6faaf00ee8f2144441657ea5f1aa6a3154659b6c35ad0680528e58b25aa1"
+      "sha256": "0e11b27ce4fa017e91c5049f8cb600515966a6cfc73fe14aa07725ae413c9d75"
     },
     {
       "document_id": "SOP-RCM-007",
@@ -322,23 +364,23 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "SOP-RCM-007.md",
-      "bytes": 1934,
+      "bytes": 1981,
       "sections": 5,
-      "sha256": "8a3eb8f2701a5f632556c5fe9a15189515acfd45335c07ad38e46a960915a495"
+      "sha256": "6a1bd87bdfcd8704d99eb12c90e3c79e6a3b2b34af760fbc9b25952331ac56da"
     },
     {
       "document_id": "SOP-REV-002",
       "title": "Human Review Queue SOP",
       "doc_type": "sop",
-      "version": "3.2",
-      "effective_from": "2026-09-15",
+      "version": "3.3",
+      "effective_from": "2026-10-15",
       "classification": "synthetic",
       "source_url": null,
       "retrieved_on": null,
       "file": "SOP-REV-002.md",
-      "bytes": 3353,
+      "bytes": 4217,
       "sections": 7,
-      "sha256": "7b9c31fbe70b622b4e4e34be37f6f37fcc3da4846d3b78277f9ca4e86ca92ff7"
+      "sha256": "672e82727c48dc468197beffdb9f13fb438e23f5282048c2b76191135726736d"
     },
     {
       "document_id": "SOP-SHT-003",
@@ -364,9 +406,9 @@
       "source_url": null,
       "retrieved_on": null,
       "file": "SOP-STK-007.md",
-      "bytes": 1795,
+      "bytes": 1842,
       "sections": 5,
-      "sha256": "5171241d65b3bca78ac60a3ce2d7efe17db3053e94f7d0ab89a5c4886607efba"
+      "sha256": "b3064d706abebc60254f5d2aa472e6aef9722860dc38e1d4e7de34fd30d27380"
     },
     {
       "document_id": "SOP-STV-004",
@@ -380,7 +422,7 @@
       "file": "SOP-STV-004.md",
       "bytes": 2586,
       "sections": 7,
-      "sha256": "b9df832c037d83d3005bfe97a77fa1528959fd57578718c38a1dccfe43101cdc"
+      "sha256": "c1bb618922c25ff5f1e7684dcfabbe8565fa77cff3b35c20518143fdb5edac05"
     },
     {
       "document_id": "TRM-SUP-002",

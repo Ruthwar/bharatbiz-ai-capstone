@@ -38,6 +38,7 @@ class ScenarioFixture(BaseModel):
     overlays: ScenarioOverlays = Field(default_factory=ScenarioOverlays)
     history: list[dict] = Field(default_factory=list)
     observations: list[dict] = Field(default_factory=list)
+    subject: dict = Field(default_factory=dict)
     unknowns: list[str] = Field(default_factory=list)
     expected: dict = Field(default_factory=dict)
     assumptions: dict = Field(default_factory=dict)

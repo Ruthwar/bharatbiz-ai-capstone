@@ -2,10 +2,10 @@
 document_id: SOP-REV-002
 title: Human Review Queue SOP
 doc_type: sop
-version: "3.2"
+version: "3.3"
 status: approved
-effective_from: 2026-09-15
-supersedes: SOP-REV-002 v3.1 (2026-05-01)
+effective_from: 2026-10-15
+supersedes: SOP-REV-002 v3.2 (2026-09-15)
 owner: Operations Desk
 classification: synthetic
 parties: SUP-002, SUP-003, SUP-005
@@ -21,21 +21,22 @@ SIMULATION ONLY. Synthetic operating procedure for an academic capstone. Approva
 
 ## 1. What reaches the queue
 
-An item reaches review when a plan has been selected and independently verified, or when a message has been triaged. Triage items and plan items share a queue but are labelled differently.
+An operational item reaches review after candidate plans have been generated and checked. The UI provides one **Recommendation mode** control: Deterministic or Policy-grounded LLM. A run uses only the selected mode. Triage items and recommendation items share a queue but are labelled differently.
 
-## 2. Reading a plan item - fixed order
+## 2. Reading a recommendation
 
 1. **Attempted coverage.** Usable stock, requested units, units bought, and the resulting unmet and late units.
-2. **The alternatives table.** Every candidate with cost, arrival date, late units, unmet units, ending cash and headroom. The selected row is marked.
-3. **The trade-off line.** If the selected plan costs more than an alternative with the same coverage, the card states how many rupees buy how many fewer late units, or how many days earlier.
-4. **Verification.** The independent check must show zero violations. A card with a failed verification is not approvable; it is a defect report.
-5. **Evidence.** Each extracted fact with its exact span and offsets. A fact that is not in the message is a validation failure, not a judgement call.
-6. **Assumptions and unknowns.** An unconfirmed revised date appears as an unknown. It is never filled in by the reviewer to make the card look complete.
-7. **Policy references.** Retrieved policy and term sections with document id and effective date. The reviewer uses these to check that the rule applied is the current rule.
+2. **The selected mode and recommendation.** Deterministic mode shows the fixed-ranking result and ranking inputs. Policy-grounded LLM mode shows the model's eligible candidate or an explicit abstention, with natural-language policy rationale and citations. Do not imply that policies drove a deterministic result.
+3. **The alternatives.** Every eligible candidate with cost, arrival estimate, late units, unmet units, ending cash and headroom. Excluded candidates remain visible with their reasons but are clearly not selectable.
+4. **The trade-off.** Show the cost difference and verified service difference between the selected recommendation and alternatives.
+5. **Verification.** The selected recommendation must point to a candidate that passed independent checks. A failed verification is not approvable; it is a defect report.
+6. **Evidence.** Each extracted fact with its exact span and offsets. A fact that is not in the message is a validation failure, not a judgement call.
+7. **Assumptions and unknowns.** An unconfirmed revised date appears as an unknown. It is never filled in by the reviewer to make the card look complete.
+8. **Policy references.** In LLM mode, show retrieved policy and term sections with document id and effective date. The reviewer checks applicability, version and how the natural-language priority informed the model result.
 
 ## 3. Decisions
 
-**Approve** only when: verification passes, evidence matches, the selected plan is the one the ranking rule produces, and the policy references support the rule applied. Approval records the approver, the plan id and the state version.
+**Approve** only when: the selected mode returned an eligible, independently verified candidate, evidence matches, and the mode-specific rationale is adequate. Record the candidate, selected mode, approver, reason and state version. A model abstention is not a candidate; the reviewer may explicitly switch to Deterministic and start a new run, or route the item for triage. Never silently fall back.
 
 **Reject** with a reason. Rejection does not delete the item; it stays in history.
 
@@ -53,7 +54,9 @@ Approval does not place an order, pay a supplier, change stock, message a retail
 
 ## 6. Common review errors
 
-- Approving a plan because it is cheapest when the ranking rule selected it for earliest arrival.
+- Assuming both modes ran when only one was selected, or treating deterministic ranking as policy interpretation.
+- Approving a model recommendation whose cited rules were not retrieved or do not support the stated trade-off.
+- Selecting an excluded candidate because its outcome looks attractive.
 - Treating the stock-only plan as free: it is affordable but may leave units unmet.
 - Approving against a stale state version after a price or order change.
 - Ignoring the headroom column because all candidates look affordable.

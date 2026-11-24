@@ -4,11 +4,13 @@ import json
 import logging
 import os
 import time
+from datetime import datetime, timezone
 
 import httpx
 
 from app.extraction.base import Extraction
 from app.extraction.prompts import EXTRACTION_PROMPT_VERSION, SYSTEM_PROMPT
+from app.observability import record_span
 from app.orchestration.taxonomy import INTENTS, UNCLASSIFIED
 from app.schemas.contracts import BusinessState, EvidenceFact, IntentMatch, MessageSubmission
 
@@ -85,6 +87,7 @@ class LLMExtractor:
             payload["response_format"] = {"type": self.json_mode}
 
         started = time.monotonic()
+        started_at = datetime.now(timezone.utc).isoformat()
         try:
             with httpx.Client(
                 timeout=self.timeout_seconds, verify=self.ca_bundle or True, trust_env=False
@@ -98,19 +101,36 @@ class LLMExtractor:
                 body = response.json()
         except httpx.HTTPStatusError as exc:
             detail = exc.response.text[:200].replace("\n", " ")
+            self._record(started_at, started, message, status="error", error=f"HTTP {exc.response.status_code}")
             raise ExtractionError(f"model call failed: HTTP {exc.response.status_code} {detail}") from exc
         except (httpx.HTTPError, ValueError) as exc:
+            self._record(started_at, started, message, status="error", error=type(exc).__name__)
             raise ExtractionError(f"model call failed: {type(exc).__name__}") from exc
 
         latency_ms = int((time.monotonic() - started) * 1000)
+        usage = body.get("usage") or {}
         try:
             content = body["choices"][0]["message"]["content"]
             parsed = json.loads(content)
         except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
+            self._record(
+                started_at,
+                started,
+                message,
+                status="error",
+                error="model returned unparseable JSON",
+                usage=usage,
+            )
             raise ExtractionError("model returned unparseable JSON") from exc
 
         extraction = self._build(parsed)
-        usage = body.get("usage") or {}
+        self._record(
+            started_at,
+            started,
+            message,
+            usage=usage,
+            detail={"intents": len(extraction.intents), "facts": len(extraction.facts)},
+        )
         logger.info(
             "extraction_completed provider=%s model=%s prompt_version=%s message_id=%s "
             "latency_ms=%d prompt_tokens=%s completion_tokens=%s intents=%d facts=%d",
@@ -125,6 +145,33 @@ class LLMExtractor:
             len(extraction.facts),
         )
         return extraction
+
+    def _record(
+        self,
+        started_at: str,
+        started: float,
+        message: MessageSubmission,
+        *,
+        status: str = "ok",
+        error: str | None = None,
+        usage: dict | None = None,
+        detail: dict | None = None,
+    ) -> None:
+        usage = usage or {}
+        record_span(
+            "extraction",
+            "generation",
+            provider="openai-compatible",
+            model=self.model,
+            prompt_version=EXTRACTION_PROMPT_VERSION,
+            started_at=started_at,
+            latency_ms=int((time.monotonic() - started) * 1000),
+            prompt_tokens=usage.get("prompt_tokens"),
+            completion_tokens=usage.get("completion_tokens"),
+            status=status,
+            error=error,
+            detail={**(detail or {}), "message_id": message.message_id, "endpoint": self.base_url},
+        )
 
     def _build(self, parsed: dict) -> Extraction:
         intents = []

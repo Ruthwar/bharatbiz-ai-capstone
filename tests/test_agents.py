@@ -20,13 +20,13 @@ def test_inventory_and_order_impact(state):
 
 
 def test_supplier_options_use_listed_offers_and_scenario_delay(state):
-    options = build_supplier_options(state, "SKU-003", 46, "SUP-005", 2, date(2026, 11, 4))
+    options = build_supplier_options(state, "SKU-003", 46, "SUP-005", 2, date(2026, 11, 26))
 
     assert [option.supplier_id for option in options] == ["SUP-002", "SUP-003", "SUP-005"]
     assert all(option.feasible for option in options)
     original = options[-1]
     assert original.lead_time_days == 3
-    assert original.scenario_arrival_date == date(2026, 11, 4)
+    assert original.scenario_arrival_date == date(2026, 11, 26)
 
 
 def test_cash_rejects_negative_outflow_magnitude():

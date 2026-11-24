@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from app.observability import trace_scope
 from app.orchestration.inbound import process_inbound
 from app.orchestration.workflow import process_message
 from app.scenarios.registry import get_scenario, list_scenarios, validate_scenario
@@ -16,6 +17,12 @@ DEMO_OUTCOMES = {
     "SCN-007": "Two reports from two distinct reporters; corroborated but unverified, with no automatic competitive action.",
     "SCN-008": "Stock-only: 56/166 litre units fulfilled and 110 unmet; on-time-receipt counterfactual selects SUP-005.",
     "SCN-009": "Nine reported requests from three retailers; no catalogue match and no assortment change.",
+    "SCN-010": "RET-016 has ₹57,448.23 past due; a 30 kg order worth ₹4,620.00 takes exposure to ₹62,068.23, above the ₹50,000.00 limit. Holding the order is the only feasible outcome; pausing existing orders adds delay and accepting it is infeasible. Human credit review.",
+    "SCN-011": "SCM-002 allows 7.50% from 40 units; the claimed 10% on 30 units mismatches. No discount or credit note is applied.",
+    "SCN-012": "DEL-9001: 60 ordered, 52 received, 5 damaged and 3 wrong; 44 usable and 16 short. A supplier claim needs human approval.",
+    "SCN-013": "RCL-001 holds BATCH-004 (SKU-005); up to 110 units are free to quarantine and 4 open orders are affected. Quarantine is the only feasible outcome; releasing the batch is infeasible. Human approval only.",
+    "SCN-014": "BATCH-002 expires on 2026-12-02, 9 days away and inside the 14-day return window; return or priority dispatch is recommended.",
+    "SCN-015": "RTE-001 has 40 units of capacity against 47 units of demand. All 7 feasible load plans are compared; the best loads ORD-0001 and ORD-0018 (26 units) and defers ORD-0006. The load plan needs human approval.",
 }
 
 
@@ -44,21 +51,26 @@ def run_scenario(
     data_dir: Path | None = None,
     persist: bool = False,
     ledger: InboundLedger | None = None,
+    decision_mode: str = "deterministic",
 ) -> dict:
     fixture = get_scenario(scenario_id)
     if fixture.message is None:
         raise ValueError(f"{scenario_id}: scenario message is required")
     state = load_business_state(data_dir=data_dir, expected_version=fixture.message.state_version)
     validate_scenario(fixture, state)
-    if not persist:
-        return process_message(fixture.message, data_dir=data_dir, scenario=fixture)
+    with trace_scope(f"scenario:{scenario_id}", scenario_id=scenario_id, source="scenario"):
+        if not persist:
+            return process_message(
+                fixture.message, data_dir=data_dir, scenario=fixture, decision_mode=decision_mode
+            )
 
-    inbound = process_inbound(
-        fixture.message,
-        ledger=ledger or default_ledger,
-        data_dir=data_dir,
-        scenario=fixture,
-    )
+        inbound = process_inbound(
+            fixture.message,
+            ledger=ledger or default_ledger,
+            data_dir=data_dir,
+            scenario=fixture,
+            decision_mode=decision_mode,
+        )
     result = inbound.get("result")
     if result is None:
         raise ValueError(f"{scenario_id}: scenario did not produce a processing result")

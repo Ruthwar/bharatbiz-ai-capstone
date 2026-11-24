@@ -13,11 +13,17 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.dashboard.evaluation_view import render_evaluation  # noqa: E402
+from app.dashboard.observability_view import render_observability  # noqa: E402
 from app.dashboard.retail_view import render_retail_desk  # noqa: E402
 from app.dashboard.review_view import (  # noqa: E402
+    ADVISORY_KINDS,
+    render_advisory,
     render_allocations,
     render_case,
     render_decision,
+    render_decision_abstention,
+    render_decision_steps,
     render_evidence,
     render_market_signal,
     render_policies,
@@ -37,9 +43,20 @@ from app.orchestration.review import build_review_context  # noqa: E402
 from app.rag.corpus import DOC_TYPES, load_documents  # noqa: E402
 from app.rag.retrieval import retrieve  # noqa: E402
 from app.state import StateLoadError, load_business_state  # noqa: E402
+from app.units import unit_word  # noqa: E402
 
 API_URL = os.getenv("BHARATBIZ_API_URL", "http://127.0.0.1:8000")
-PAGES = ["Overview", "Inbox", "Scenario lab", "Decision desk", "Retail desk", "Operations data", "Knowledge"]
+PAGES = [
+    "Overview",
+    "Inbox",
+    "Scenario lab",
+    "Decision desk",
+    "Retail desk",
+    "Operations data",
+    "Evaluation",
+    "LLM observability",
+    "Knowledge",
+]
 
 st.set_page_config(page_title="BharatBiz Operations", layout="wide", initial_sidebar_state="expanded")
 apply_theme()
@@ -82,6 +99,29 @@ def safe_get(path: str, fallback):
 def go_to(page: str) -> None:
     st.session_state.next_page = page
     st.rerun()
+
+
+@st.dialog("Reset demo data?")
+def confirm_demo_reset() -> None:
+    st.write(
+        "This clears displayed scenario results, inbox chats, unfinished conversations, "
+        "the review queue, retailer cases, reply drafts, market observations and model traces."
+    )
+    st.caption("The fifteen source fixtures, base business data, knowledge corpus and evaluation results are preserved.")
+    cancel_column, reset_column = st.columns(2)
+    if cancel_column.button("Cancel", width="stretch"):
+        st.rerun()
+    if reset_column.button("Yes, reset demo", type="primary", width="stretch"):
+        try:
+            post("/api/v1/demo/reset", {})
+        except urllib.error.HTTPError as exc:
+            st.error(f"API returned {exc.code}: {exc.read().decode('utf-8')}")
+        except (urllib.error.URLError, TimeoutError) as exc:
+            st.error(f"Cannot reset the demo through the API at {API_URL}: {exc}")
+        else:
+            st.session_state.clear()
+            st.session_state.next_page = "Overview"
+            st.rerun()
 
 
 def inventory_rows(state) -> list[dict]:
@@ -366,7 +406,13 @@ def render_inbox(parties: list[dict], scenarios: list[dict]) -> None:
                 width="stretch",
             ):
                 try:
-                    result = post(f"/api/v1/scenarios/{selected_example_id}/run", {"persist_review": False})
+                    result = post(
+                        f"/api/v1/scenarios/{selected_example_id}/run",
+                        {
+                            "persist_review": False,
+                            "decision_mode": st.session_state.get("recommendation_mode", "deterministic"),
+                        },
+                    )
                 except urllib.error.HTTPError as exc:
                     st.error(f"API returned {exc.code}: {exc.read().decode('utf-8')}")
                 except urllib.error.URLError as exc:
@@ -374,6 +420,7 @@ def render_inbox(parties: list[dict], scenarios: list[dict]) -> None:
                 else:
                     st.session_state.scenario_result = result
                     st.session_state.scenario_result_id = selected_example_id
+                    st.session_state.scenario_result_mode = st.session_state.get("recommendation_mode", "deterministic")
                     st.session_state.scenario_selector = selected_example_id
                     go_to("Scenario lab")
             st.caption("Editable intake processes only the visible message. Run full scenario to include all fixture overlays and assumptions.")
@@ -406,6 +453,7 @@ def render_inbox(parties: list[dict], scenarios: list[dict]) -> None:
                         "sender_id": sender_id,
                         "language": language,
                         "conversation_id": conversation_id,
+                        "decision_mode": st.session_state.get("recommendation_mode", "deterministic"),
                     }
                     try:
                         result = post("/api/v1/inbound", payload)
@@ -430,7 +478,7 @@ def render_inbox(parties: list[dict], scenarios: list[dict]) -> None:
 
 def render_scenario_lab(scenarios: list[dict]) -> None:
     page_header(
-        "Deterministic simulations",
+        "Selectable decision modes",
         "Scenario lab",
         "Run every capstone scenario through the same extraction, planning, verification and human-review contracts.",
         f"{len(scenarios)} explicit fixtures · base business data is never mutated",
@@ -451,9 +499,14 @@ def render_scenario_lab(scenarios: list[dict]) -> None:
     if st.button("Run selected scenario", type="primary"):
         try:
             st.session_state.scenario_result = post(
-                f"/api/v1/scenarios/{selected_id}/run", {"persist_review": persist}
+                f"/api/v1/scenarios/{selected_id}/run",
+                {
+                    "persist_review": persist,
+                    "decision_mode": st.session_state.get("recommendation_mode", "deterministic"),
+                },
             )
             st.session_state.scenario_result_id = selected_id
+            st.session_state.scenario_result_mode = st.session_state.get("recommendation_mode", "deterministic")
         except urllib.error.HTTPError as exc:
             st.error(f"API returned {exc.code}: {exc.read().decode('utf-8')}")
         except urllib.error.URLError as exc:
@@ -465,25 +518,40 @@ def render_scenario_lab(scenarios: list[dict]) -> None:
         return
     if st.session_state.get("scenario_result_id") != selected_id:
         st.info("The displayed result is from the previously selected scenario. Run this scenario to replace it.")
+    if st.session_state.get("scenario_result_mode") != st.session_state.get("recommendation_mode", "deterministic"):
+        st.info("The displayed result used a different recommendation mode. Run the scenario again to use the selected mode.")
+    if result.get("decision_mode_applied") is False:
+        st.caption("This scenario does not produce an operational plan, so the selected decision mode was not applied.")
+    context = build_review_context(result)
     event = result.get("event") or {}
     recommendation = result.get("recommendation") or {}
+    event_label = (context or {}).get("event_label") or event.get("event_type", "unclassified").replace("_", " ")
+    review_label = (context or {}).get("review_label") or result.get("review_kind", "triage").replace("_", " ")
+    mode_label = (context or {}).get("decision_mode_label") or result.get("decision_mode", "deterministic")
     st.markdown(
-        f"{badge(event.get('event_type', 'unclassified').replace('_', ' '), 'warning')} "
-        f"{badge(result.get('review_kind', 'triage'))} {badge(result.get('mode', 'unknown'))}",
+        f"{badge(event_label, 'warning')} {badge(review_label)} {badge(mode_label)}",
         unsafe_allow_html=True,
     )
-    st.caption(f"Event {event.get('event_id')} · state {event.get('state_version')}")
+    st.caption(
+        f"Status: {str(recommendation.get('review_status', 'unknown')).replace('_', ' ')} · "
+        f"Event {event.get('event_id')} · Data version {event.get('state_version')} · "
+        f"Facts read with {(context or {}).get('extraction_label', 'deterministic extraction')}"
+    )
+    summary_text = (context or {}).get("operator_summary") or recommendation.get("summary", "")
     st.markdown(
-        f"<div class='bb-recommendation'><div class='bb-recommendation-label'>Recommendation</div>"
-        f"<div class='bb-recommendation-text'>{escape(recommendation.get('summary', ''))}</div></div>",
+        f"<div class='bb-recommendation'><div class='bb-recommendation-label'>What this means</div>"
+        f"<div class='bb-recommendation-text'>{escape(summary_text)}</div></div>",
         unsafe_allow_html=True,
     )
     inbound = result.get("inbound") or {}
     if inbound.get("question"):
         st.info(inbound["question"])
     if inbound:
-        st.caption(f"Review route: {inbound.get('routed_action')} · status: {recommendation.get('review_status')}")
-    render_review_context(build_review_context(result))
+        st.caption(
+            f"Routed to {str(inbound.get('routed_action', 'review')).replace('_', ' ')} · "
+            f"status {str(recommendation.get('review_status', 'unknown')).replace('_', ' ')}"
+        )
+    render_review_context(context, show_summary=False)
 
 
 def render_draft_review_actions(item: dict) -> None:
@@ -588,7 +656,7 @@ def render_decision_desk(review_items: list[dict]) -> None:
                 key="case_selector",
                 format_func=lambda event_id: (
                     f"{list(item_by_id).index(event_id) + 1:02d} · "
-                    f"{item_by_id[event_id]['event_type'].replace('_', ' ').title()}"
+                    f"{(item_by_id[event_id].get('why') or {}).get('event_label') or item_by_id[event_id]['event_type'].replace('_', ' ').title()}"
                 ),
                 label_visibility="collapsed",
             )
@@ -597,20 +665,27 @@ def render_decision_desk(review_items: list[dict]) -> None:
     context = item.get("why")
     with detail_column:
         st.markdown(
-            f"{badge('Pending review', 'warning')} {badge(item['event_type'].replace('_', ' '))} "
+            f"{badge('Pending review', 'warning')} "
+            f"{badge((context or {}).get('event_label') or item['event_type'].replace('_', ' '))} "
             f"<span class='bb-code'>{escape(item['event_id'])}</span>",
             unsafe_allow_html=True,
         )
-        st.caption(f"Received {item['received_at']} · state {item['state_version']} · mode {item['mode']}")
+        st.caption(
+            f"Received {item['received_at']} · data version {item['state_version']} · "
+            f"decision {((context or {}).get('decision_mode_label') or item.get('decision_mode') or 'deterministic').lower()} · "
+            f"facts {(context or {}).get('extraction_label') or item['mode']}"
+        )
+        summary_text = (context or {}).get("operator_summary") or item["summary"]
         st.markdown(
-            f"<div class='bb-recommendation'><div class='bb-recommendation-label'>Recommended action</div>"
-            f"<div class='bb-recommendation-text'>{escape(item['summary'])}</div></div>",
+            f"<div class='bb-recommendation'><div class='bb-recommendation-label'>What this means</div>"
+            f"<div class='bb-recommendation-text'>{escape(summary_text)}</div></div>",
             unsafe_allow_html=True,
         )
         if not context:
             st.warning("This case does not have a structured plan. Review the triage summary before resolving it.")
             render_review_actions(item, None)
             return
+        render_decision_steps(context)
         if context.get("review_kind") in {"case_review", "market_signal_review"}:
             review_tab, evidence_tab, policies_tab = st.tabs(["Assessment", "Evidence & unknowns", "Policy basis"])
             with review_tab:
@@ -624,23 +699,52 @@ def render_decision_desk(review_items: list[dict]) -> None:
                 render_policies(context)
             render_review_actions(item, context)
             return
+        if context.get("review_kind") in ADVISORY_KINDS:
+            review_tab, evidence_tab, policies_tab = st.tabs(["Assessment", "Evidence & unknowns", "Policy basis"])
+            with review_tab:
+                render_advisory(context)
+            with evidence_tab:
+                render_evidence(context)
+            with policies_tab:
+                render_policies(context)
+            render_review_actions(item, context)
+            return
+        if context.get("review_kind") == "decision_abstention":
+            render_decision_abstention(context)
+            evidence_tab, policies_tab = st.tabs(["Evidence & unknowns", "Policy basis"])
+            with evidence_tab:
+                render_evidence(context)
+            with policies_tab:
+                render_policies(context)
+            render_review_actions(item, context)
+            return
         selected = next((row for row in context["alternatives"] if row["selected"]), None)
         columns = st.columns(5)
         with columns[0]:
             metric_card(
                 "Coverage",
                 f"{context['selected_fulfilled_units']}/{context['requested_units']}",
-                context["unit"],
+                unit_word(context["requested_units"], context["unit"]),
                 "accent",
             )
         with columns[1]:
-            metric_card("Late", str(context["selected_late_units"]), context["unit"], "warning")
+            metric_card(
+                "Late",
+                str(context["selected_late_units"]),
+                unit_word(context["selected_late_units"], context["unit"]),
+                "warning",
+            )
         with columns[2]:
-            metric_card("Unmet", str(context["selected_unmet_units"]), context["unit"], "danger" if context["selected_unmet_units"] else "success")
+            metric_card(
+                "Unfilled",
+                str(context["selected_unmet_units"]),
+                unit_word(context["selected_unmet_units"], context["unit"]),
+                "danger" if context["selected_unmet_units"] else "success",
+            )
         with columns[3]:
-            metric_card("Plan cost", money(context["selected_cost_rupees"]), "Immediate outflow")
+            metric_card("Purchase cost", money(context["selected_cost_rupees"]), "Immediate outflow")
         with columns[4]:
-            metric_card("Cash headroom", money(selected["headroom_rupees"]) if selected else "—", "After procurement", "success")
+            metric_card("Cash left above buffer", money(selected["headroom_rupees"]) if selected else "—", "After procurement", "success")
         st.write("")
         decision_tab, evidence_tab, policies_tab, allocations_tab = st.tabs(
             ["Decision", "Evidence & unknowns", "Policy basis", "Order allocation"]
@@ -764,6 +868,27 @@ def render_knowledge() -> None:
     with columns[3]:
         metric_card("Retrieval", "BM25", "Deterministic · local · no embeddings", "success")
     st.write("")
+    policies = [document for document in documents if document.doc_type == "policy"]
+    in_force = [document for document in policies if document.effective_from <= state.as_of.date().isoformat()]
+    pending = [document for document in policies if document.effective_from > state.as_of.date().isoformat()]
+    with st.expander(f"Policy state on {state.as_of:%d %b %Y} · {len(in_force)} in force, {len(pending)} pending"):
+        st.caption(
+            "Effective dates decide which rules can ground a recommendation. Pending rules are written and approved "
+            "but are excluded until their effective date."
+        )
+        st.dataframe(
+            [
+                {
+                    "Policy": document.document_id,
+                    "Title": document.title,
+                    "Effective": document.effective_from,
+                    "State on demo date": "In force" if document in in_force else "Pending",
+                }
+                for document in policies
+            ],
+            width="stretch",
+            hide_index=True,
+        )
     with st.container(border=True):
         query_column, type_column = st.columns([2, 1])
         query = query_column.text_input(
@@ -830,6 +955,7 @@ open_order_rows = order_rows(state)
 if st.session_state.get("next_page"):
     st.session_state.navigation = st.session_state.pop("next_page")
 st.session_state.setdefault("navigation", "Overview")
+st.session_state.setdefault("recommendation_mode", "deterministic")
 
 with st.sidebar:
     st.markdown(
@@ -848,7 +974,7 @@ with st.sidebar:
         inference_text = "<strong>API offline</strong><br>Business data remains available"
         inference_tone = "#f3b4b4"
     elif inference["llm_enabled"]:
-        inference_text = f"<strong>LLM extraction on</strong><br>{escape(inference['model'])}<br>Validated output · deterministic planning"
+        inference_text = f"<strong>LLM extraction on</strong><br>{escape(inference['model'])}<br>Validated output · recommendation mode selected below"
         inference_tone = "#a7e3d5"
     else:
         inference_text = "<strong>Rules extraction</strong><br>No model call during intake"
@@ -858,6 +984,21 @@ with st.sidebar:
         f"<strong>As of</strong> {state.as_of:%d %b %Y}<br><span class='bb-code'>{escape(state.state_version)}</span></div>",
         unsafe_allow_html=True,
     )
+    st.selectbox(
+        "Recommendation mode",
+        ["deterministic", "policy_grounded_llm"],
+        key="recommendation_mode",
+        format_func=lambda value: "Deterministic" if value == "deterministic" else "Policy-grounded LLM",
+        help="Choose one mode for scenario runs and incoming operational messages.",
+    )
+    if inference and st.session_state.recommendation_mode == "policy_grounded_llm":
+        if inference.get("decision_llm_enabled"):
+            st.caption(f"Decision model: {escape(inference.get('decision_model') or 'configured model')}")
+        else:
+            st.warning("The policy-grounded LLM is not configured. Configure the existing LLM provider before running it.")
+    if st.button("Reset demo", disabled=inference is None, width="stretch"):
+        confirm_demo_reset()
+    st.caption("Start fresh: clear scenario runs, chats, reviews, retailer history and model traces.")
     st.divider()
     st.caption("Academic synthetic simulation. Recommendations are advisory and require human approval.")
     st.caption("No purchases · payments · stock mutations · outbound messages")
@@ -874,5 +1015,9 @@ elif page == "Retail desk":
     render_retail_desk(state, get, post, patch, review_items)
 elif page == "Operations data":
     render_operations(state, stock_rows, open_order_rows)
+elif page == "Evaluation":
+    render_evaluation(inference, get, post)
+elif page == "LLM observability":
+    render_observability(get)
 else:
     render_knowledge()

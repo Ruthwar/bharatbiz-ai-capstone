@@ -1,0 +1,40 @@
+{
+  "scenario_id": "SCN-012",
+  "name": "Short and damaged delivery",
+  "description": "Ganesh Supermarket reports a cooking-oil delivery that was short, partly damaged and partly the wrong item. The system reconciles the delivery evidence and prepares a supplier claim for approval.",
+  "message": {
+    "message_id": "DEMO-SCN-012-001",
+    "source_type": "retailer_message",
+    "text": "Delivery DEL-9001 against invoice INV-9001 was short: 52 of 60 litres arrived, 5 damaged and 3 wrong item. Please raise a supplier claim.",
+    "observed_at": "2026-11-23T15:20:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v3-live-20261123",
+    "sender": {
+      "party_type": "retailer",
+      "party_id": "RET-004",
+      "channel": "whatsapp"
+    }
+  },
+  "target_sku_id": "SKU-003",
+  "subject": {
+    "delivery_id": "DEL-9001",
+    "retailer_id": "RET-004",
+    "invoice_reference": "INV-9001"
+  },
+  "unknowns": [
+    "supplier_claim_value",
+    "replacement_approval"
+  ],
+  "expected": {
+    "review_kind": "delivery_discrepancy_review",
+    "review_status": "pending_review",
+    "ordered_units": 60,
+    "received_units": 52,
+    "damaged_units": 5,
+    "wrong_item_units": 3,
+    "usable_units": 44,
+    "net_shortfall_units": 16,
+    "executes_claim": false
+  }
+}

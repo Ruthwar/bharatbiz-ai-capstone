@@ -3,11 +3,13 @@ from datetime import date
 from decimal import Decimal
 
 from app.agents.supplier import build_supplier_options
+from app.decision import recommend_plan
 from app.extraction.base import Extraction
 from app.optimization.baseline import build_view_candidate_plans, select_best_plan
 from app.optimization.context import build_planning_view
 from app.scenarios.contracts import ScenarioFixture, ScenarioOverlays
 from app.schemas.contracts import AgentResult, BusinessEvent, BusinessState, MessageSubmission, Recommendation
+from app.units import format_units
 from app.verification.checks import verify_scenario_plan
 
 
@@ -131,6 +133,7 @@ def run_operational_scenario(
     extraction: Extraction,
     state: BusinessState,
     fixture: ScenarioFixture | None = None,
+    decision_mode: str = "deterministic",
 ) -> dict:
     intent = event.event_type
     sku_id = (fixture.target_sku_id if fixture else None) or extraction.inferences.get("catalogue_sku_id")
@@ -155,8 +158,36 @@ def run_operational_scenario(
         view.planning_horizon,
     )
     candidates, exclusions = build_view_candidate_plans(view, options)
-    selected = select_best_plan(candidates)
-    verification = verify_scenario_plan(state, selected, overlays, sku_id)
+    candidate_verifications = {
+        plan.candidate_id: verify_scenario_plan(state, plan, overlays, sku_id)
+        for plan in candidates
+    }
+    verified_candidates = [
+        plan for plan in candidates if candidate_verifications[plan.candidate_id].valid
+    ]
+    failed_candidates = [
+        plan for plan in candidates if not candidate_verifications[plan.candidate_id].valid
+    ]
+    for plan in failed_candidates:
+        exclusions.append(
+            {
+                "candidate_id": plan.candidate_id,
+                "supplier_id": plan.supplier_option.supplier_id if plan.supplier_option else None,
+                "reasons": list(candidate_verifications[plan.candidate_id].violations),
+                "details": {"verification": "failed"},
+            }
+        )
+    selected, decision_record = recommend_plan(
+        decision_mode,
+        verified_candidates,
+        message,
+        event.model_dump(mode="json"),
+        view.original_supplier_id,
+        state.as_of.date(),
+    )
+    verification = candidate_verifications[selected.candidate_id] if selected else None
+    if selected is None and decision_record.get("abstain_reason"):
+        event.uncertainties.append(decision_record["abstain_reason"])
 
     assumptions = [
         "Scenario arrival dates are planning estimates, not supplier-confirmed commitments.",
@@ -177,35 +208,68 @@ def run_operational_scenario(
     event.inferences["scenario_overlay_count"] = str(len(view.overlay_audit))
 
     warnings = []
-    if selected.late_units:
-        warnings.append(f"{selected.late_units} {unit} units remain late in the selected plan.")
-    if selected.unmet_units:
-        warnings.append(f"{selected.unmet_units} {unit} units remain unmet; no feasible candidate covers all demand.")
-    if not verification.valid:
+    if selected and selected.late_units:
+        warnings.append(f"{format_units(selected.late_units, unit)} remain late in the selected plan.")
+    if selected and selected.unmet_units:
+        warnings.append(f"{format_units(selected.unmet_units, unit)} remain unmet; no feasible candidate covers all demand.")
+    if verification and not verification.valid:
         warnings.extend(verification.violations)
+    if selected is None:
+        for plan in failed_candidates:
+            for violation in candidate_verifications[plan.candidate_id].violations:
+                if violation not in warnings:
+                    warnings.append(violation)
 
-    option = selected.supplier_option
-    if option:
+    option = selected.supplier_option if selected else None
+    if selected is None:
+        mode_label = "Policy-grounded LLM" if decision_mode == "policy_grounded_llm" else "Deterministic"
+        summary = f"{mode_label} mode returned no verified eligible recommendation. Human review is required."
+    elif option:
         label = option.supplier_name or option.supplier_id
+        qty = option.quantity_units
+        quantity_label = format_units(qty, unit)
+        fulfilment = (
+            "all requested"
+            if selected.unmet_units == 0
+            else f"{selected.fulfilled_units} of {selected.total_requested_units} requested"
+        )
         summary = (
-            f"Recommended scenario option: {option.quantity_units} {unit} units from {label} "
-            f"({option.supplier_id}); {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
-            f"{selected.late_units} late, {selected.unmet_units} unmet. Awaiting human review."
+            f"Recommended option: buy {quantity_label} from {label} ({option.supplier_id}). "
+            f"It fulfils {fulfilment} units, with {selected.late_units} arriving after the promised date "
+            f"and {selected.unmet_units} unfilled. Awaiting human review."
         )
     else:
+        fulfilment = (
+            "all requested"
+            if selected.unmet_units == 0
+            else f"{selected.fulfilled_units} of {selected.total_requested_units} requested"
+        )
         summary = (
-            f"Use available stock: {selected.fulfilled_units}/{selected.total_requested_units} fulfilled, "
-            f"{selected.late_units} late, {selected.unmet_units} unmet. Awaiting human review."
+            f"Stock alone fulfils {fulfilment} units, with {selected.late_units} arriving after the promised "
+            f"date and {selected.unmet_units} unfilled. Awaiting human review."
         )
     recommendation = Recommendation(
-        recommendation_id=_stable_id("rec", event.event_id, selected.candidate_id),
+        recommendation_id=_stable_id("rec", event.event_id, selected.candidate_id if selected else decision_mode),
         state_version=state.state_version,
         summary=summary,
         evidence_refs=[message.message_id, state.state_version],
         assumptions=assumptions,
         warnings=warnings,
-        review_status="pending_review" if verification.valid else "needs_clarification",
+        review_status="pending_review" if verification and verification.valid else "needs_clarification",
     )
+    trace = [
+        "received",
+        "state_loaded",
+        "event_extracted",
+        "specialists_completed",
+        "candidates_optimized",
+        "candidate_plans_verified",
+    ]
+    if selected is None:
+        trace.append("verification_failed" if candidates and not verified_candidates else "decision_abstained")
+    else:
+        trace.append("decision_recommended")
+        trace.append("pending_human_review" if verification and verification.valid else "verification_failed")
     result = {
         "message": message.model_dump(mode="json"),
         "event": event.model_dump(mode="json"),
@@ -224,23 +288,20 @@ def run_operational_scenario(
         },
         "supplier_options": [option.model_dump(mode="json") for option in options],
         "candidate_plans": [plan.model_dump(mode="json") for plan in candidates],
-        "excluded_candidates": [exclusion.model_dump(mode="json") for exclusion in exclusions],
-        "selected_plan": selected.model_dump(mode="json"),
-        "verification": verification.model_dump(mode="json"),
+        "excluded_candidates": [
+            exclusion.model_dump(mode="json") if hasattr(exclusion, "model_dump") else dict(exclusion)
+            for exclusion in exclusions
+        ],
+        "selected_plan": selected.model_dump(mode="json") if selected else None,
+        "verification": verification.model_dump(mode="json") if verification else None,
+        "decision": decision_record,
+        "decision_mode": decision_mode,
         "recommendation": recommendation.model_dump(mode="json"),
         "counterfactuals": [],
-        "trace": [
-            "received",
-            "state_loaded",
-            "event_extracted",
-            "specialists_completed",
-            "candidates_optimized",
-            "independently_verified",
-            "pending_human_review" if verification.valid else "verification_failed",
-        ],
+        "trace": trace,
         "mode": extraction.mode,
     }
-    if view.receipts:
+    if view.receipts and selected:
         counter_candidates, counter_exclusions = build_view_candidate_plans(view, options, "on_time")
         counter_selected = select_best_plan(counter_candidates)
         counter_verification = verify_scenario_plan(state, counter_selected, overlays, sku_id, "on_time")

@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BharatBiz AI — Ruthwar's Personal Demo Handbook</title>
+  <style>
+    :root {
+      --navy: #14243d;
+      --blue: #2457d6;
+      --blue-soft: #edf3ff;
+      --teal: #0d7c72;
+      --teal-soft: #eaf8f5;
+      --amber: #9a5b00;
+      --amber-soft: #fff6df;
+      --red: #a83c3c;
+      --red-soft: #fff0f0;
+      --ink: #202a38;
+      --muted: #5d6978;
+      --line: #d9e0ea;
+      --paper: #ffffff;
+      --canvas: #eef2f7;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+    }
+    .book { max-width: 1060px; margin: 0 auto; background: var(--paper); box-shadow: 0 0 30px #1d2b4418; }
+    .cover {
+      min-height: 92vh;
+      padding: 70px 64px 48px;
+      color: white;
+      background: linear-gradient(145deg, #101e35 0%, #173b72 58%, #2457d6 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .cover .eyebrow { color: #a9c7ff; }
+    .cover h1 { font-size: 48px; line-height: 1.08; margin: 18px 0; max-width: 760px; color: white; }
+    .cover .subtitle { font-size: 23px; max-width: 760px; color: #e3ecff; }
+    .cover .mantra { font-size: 20px; line-height: 1.6; padding: 24px; border: 1px solid #ffffff45; border-radius: 14px; background: #ffffff10; }
+    .cover .meta { color: #cfddf5; font-size: 14px; }
+    main { padding: 42px 54px 60px; }
+    h1, h2, h3, h4 { color: var(--navy); line-height: 1.22; }
+    h2 { font-size: 28px; margin: 48px 0 12px; padding-bottom: 10px; border-bottom: 3px solid var(--blue); }
+    h2:first-child { margin-top: 0; }
+    h3 { font-size: 20px; margin: 28px 0 8px; }
+    h4 { font-size: 16px; margin: 18px 0 6px; }
+    p { margin: 8px 0 12px; }
+    ul, ol { margin: 8px 0 14px; padding-left: 24px; }
+    li { margin: 5px 0; }
+    a { color: var(--blue); text-decoration: none; }
+    .eyebrow { text-transform: uppercase; letter-spacing: 1.8px; font-weight: 700; font-size: 12px; color: var(--blue); }
+    .lead { font-size: 18px; color: #35445a; }
+    .muted { color: var(--muted); }
+    .small { font-size: 13px; }
+    .tiny { font-size: 12px; }
+    .nowrap { white-space: nowrap; }
+    .say {
+      margin: 14px 0;
+      padding: 15px 18px;
+      border-left: 5px solid var(--blue);
+      background: var(--blue-soft);
+      border-radius: 0 10px 10px 0;
+    }
+    .say strong:first-child { color: var(--blue); }
+    .warning { border-left-color: var(--amber); background: var(--amber-soft); }
+    .warning strong:first-child { color: var(--amber); }
+    .danger { border-left-color: var(--red); background: var(--red-soft); }
+    .danger strong:first-child { color: var(--red); }
+    .success { border-left-color: var(--teal); background: var(--teal-soft); }
+    .success strong:first-child { color: var(--teal); }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+      margin: 14px 0;
+      break-inside: avoid;
+    }
+    .card h3, .card h4 { margin-top: 0; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .metric {
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--blue);
+      border-radius: 10px;
+      background: #fbfcff;
+      break-inside: avoid;
+    }
+    .metric .value { display: block; color: var(--navy); font-size: 25px; font-weight: 750; line-height: 1.15; }
+    .metric .label { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 13px; }
+    thead { display: table-header-group; }
+    th { text-align: left; color: var(--navy); background: #edf2f9; font-weight: 700; }
+    th, td { padding: 9px 10px; border: 1px solid var(--line); vertical-align: top; }
+    tr { break-inside: avoid; }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.92em;
+      background: #f0f3f7;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      padding: 16px;
+      color: #eaf1ff;
+      background: #152238;
+      border-radius: 10px;
+      font: 13px/1.55 Consolas, "Courier New", monospace;
+      break-inside: avoid;
+    }
+    pre code { padding: 0; color: inherit; background: none; }
+    .tag { display: inline-block; padding: 2px 8px; margin: 1px 3px 1px 0; border-radius: 20px; background: var(--blue-soft); color: var(--blue); font-size: 11px; font-weight: 700; }
+    .tag.green { color: var(--teal); background: var(--teal-soft); }
+    .tag.amber { color: var(--amber); background: var(--amber-soft); }
+    .toc { columns: 2; column-gap: 34px; padding: 0; list-style: none; }
+    .toc li { break-inside: avoid; padding: 7px 0; border-bottom: 1px solid #edf0f5; }
+    .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; }
+    .flow .step { flex: 1 1 120px; min-height: 80px; padding: 12px; border: 1px solid #c9d6ee; border-radius: 9px; background: #f5f8ff; text-align: center; font-size: 13px; }
+    .flow .step strong { display: block; color: var(--navy); margin-bottom: 4px; }
+    .qa { border-bottom: 1px solid var(--line); padding: 13px 0; break-inside: avoid; }
+    .qa .question { color: var(--navy); font-weight: 700; font-size: 16px; margin-bottom: 5px; }
+    .qa .answer { margin-left: 16px; }
+    .scenario { border-left: 4px solid var(--blue); }
+    .scenario .input { font-family: Consolas, monospace; font-size: 13px; background: #f5f7fa; padding: 10px; border-radius: 7px; }
+    .checklist { list-style: none; padding-left: 0; }
+    .checklist li { padding-left: 27px; position: relative; }
+    .checklist li::before { content: "□"; position: absolute; left: 2px; color: var(--blue); font-weight: 700; }
+    .page-break { break-before: page; }
+    .avoid-break { break-inside: avoid; }
+    .footer-note { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    @media (max-width: 720px) {
+      .cover { padding: 42px 28px; }
+      .cover h1 { font-size: 36px; }
+      main { padding: 28px 22px; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .toc { columns: 1; }
+      table { font-size: 12px; }
+    }
+    @media print {
+      @page { size: A4; margin: 14mm 12mm 16mm; }
+      body { background: white; font-size: 10.2pt; line-height: 1.43; }
+      .book { max-width: none; box-shadow: none; }
+      .cover { min-height: 250mm; margin: -14mm -12mm -16mm; padding: 28mm 18mm 22mm; break-after: page; }
+      .cover h1 { font-size: 34pt; }
+      .cover .subtitle { font-size: 17pt; }
+      main { padding: 0; }
+      h2 { font-size: 20pt; margin-top: 28px; }
+      h3 { font-size: 14.5pt; }
+      a { color: inherit; }
+      .toc { columns: 2; }
+      .card, .say, .metric, pre { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      th, .tag, .flow .step { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .screen-only { display: none !important; }
+      table { font-size: 8.7pt; }
+      .footer-note { margin-top: 24px; }
+    }
+  </style>
+</head>
+<body>
+<div class="book">
+  <section class="cover">
+    <div>
+      <div class="eyebrow">Personal presentation hand note</div>
+      <h1>BharatBiz AI<br>Complete Demo Handbook</h1>
+      <p class="subtitle">Simple explanations, exact demo steps, nine example scenarios, technical notes, evaluation results, and mentor Q&amp;A.</p>
+    </div>
+    <div class="mantra"><strong>My one-line memory aid:</strong><br>AI understands the language. Business data supplies the numbers. Deterministic rules calculate. RAG supplies checkable policy evidence. A verifier checks the plan. A human makes the decision.</div>
+    <div class="meta">Prepared for Ruthwar · Academic synthetic capstone demo<br>Current integrated version verified on 17 November 2026 · Keep this page available during the presentation</div>
+  </section>
+
+  <main>
+    <section id="quick">
+      <div class="eyebrow">Start here</div>
+      <h2>1. My one-minute explanation</h2>
+      <div class="say"><strong>Say this:</strong> “BharatBiz AI is an academic decision-support prototype for an FMCG distributor. It takes supplier updates, retailer messages, and sales-visit notes; extracts only evidence-backed facts; combines them with synthetic inventory, orders, supplier offers, and cash; then produces a verified recommendation for human review. The important design choice is that the language model does not control stock, money, purchasing, or final decisions.”</div>
+      <div class="say"><strong>If asked what is innovative:</strong> “The strength is not just calling an LLM. It is the separation of language understanding, cited policy retrieval, deterministic business calculations, independent verification, visible uncertainty, and human authority.”</div>
+
+      <h3>Ten facts to remember</h3>
+      <div class="grid-3">
+        <div class="metric"><span class="value">9 / 9</span><span class="label">canonical scenario checks passing</span></div>
+        <div class="metric"><span class="value">114</span><span class="label">Python tests passing in the verified build</span></div>
+        <div class="metric"><span class="value">30</span><span class="label">curated knowledge documents</span></div>
+        <div class="metric"><span class="value">40</span><span class="label">frozen RAG golden queries</span></div>
+        <div class="metric"><span class="value">12</span><span class="label">synthetic held-out extraction messages</span></div>
+        <div class="metric"><span class="value">0</span><span class="label">automatic purchases, payments, stock changes, or substantive outbound messages</span></div>
+      </div>
+
+      <h3>Contents</h3>
+      <ol class="toc">
+        <li><a href="#quick">One-minute explanation</a></li>
+        <li><a href="#startup">Startup and pre-demo checklist</a></li>
+        <li><a href="#demo-script">Presentation flow</a></li>
+        <li><a href="#scenarios">All nine demo scenarios</a></li>
+        <li><a href="#architecture">Architecture in simple language</a></li>
+        <li><a href="#worked-example">SCN-003 worked calculation</a></li>
+        <li><a href="#rag">RAG explained and measured</a></li>
+        <li><a href="#evaluation">LLM extraction evaluation</a></li>
+        <li><a href="#retail">Retail desk and durable review</a></li>
+        <li><a href="#safety">Safety, limitations, and honest claims</a></li>
+        <li><a href="#faq">Mentor FAQs and answers</a></li>
+        <li><a href="#trouble">Demo troubleshooting and closing script</a></li>
+      </ol>
+    </section>
+
+    <section id="startup" class="page-break">
+      <div class="eyebrow">Before the mentor joins</div>
+      <h2>2. Startup and pre-demo checklist</h2>
+      <p>Open a terminal in the project folder: <code>bharatbiz-ai-capstone-inventory-review</code>. These commands use the currently verified demo ports.</p>
+      <h3>Terminal 1 — API</h3>
+      <pre><code>uvicorn app.main:app --host 127.0.0.1 --port 8011</code></pre>
+      <h3>Terminal 2 — Dashboard (PowerShell)</h3>
+      <pre><code>$env:BHARATBIZ_API_URL="http://127.0.0.1:8011"
+streamlit run app/dashboard/chat.py --server.address 127.0.0.1 --server.port 8511</code></pre>
+      <p>Open <strong>http://127.0.0.1:8511</strong>. Keep both terminals running. Do not open or display <code>.env</code>; it contains the private model credential.</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Model-backed demo</h3>
+          <ul>
+            <li>The configured extractor is <strong>Qwen/Qwen3-8B</strong> through the approved OpenAI-compatible gateway.</li>
+            <li>Check it before the demo with <code>python scripts/check_llm.py</code>.</li>
+            <li>The dashboard sidebar should say <strong>LLM extraction on</strong>.</li>
+            <li>Only synthetic demo/evaluation messages should be sent to the model.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>No-key fallback</h3>
+          <ul>
+            <li>Scenario lab remains deterministic and repeatable.</li>
+            <li>With <code>LLM_PROVIDER=none</code>, rules extraction is used.</li>
+            <li>The LLM evaluation button is intentionally disabled if no model is configured.</li>
+            <li>Do not troubleshoot credentials in front of the mentor; use the verified scenario path.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Five-minute checklist</h3>
+      <ul class="checklist">
+        <li>API and dashboard both load; no browser error is visible.</li>
+        <li>Open <strong>Scenario lab</strong> and confirm that nine scenarios appear.</li>
+        <li>Open <strong>Inbox → Intake controls → Demo examples</strong>.</li>
+        <li>Run SCN-003 once as a rehearsal; confirm SUP-002, 102 fulfilled, 28 late, zero unmet.</li>
+        <li>Open <strong>Evaluation</strong>; run RAG once so its result is ready.</li>
+        <li>If demonstrating Qwen, run the LLM evaluation once before the presentation and inspect the two fallback examples.</li>
+        <li>Keep this handbook open on a second screen or printed.</li>
+        <li>Zoom the browser to approximately 90–100% so tables and metric cards remain readable.</li>
+      </ul>
+      <div class="say warning"><strong>Optional clean start:</strong> <code>python scripts/reset_demo.py</code> clears previous runtime review and retail demo records. It does not change the base synthetic CSV state. Use it only when you intentionally want an empty demo queue.</div>
+      <div class="say danger"><strong>Never during the demo:</strong> reveal the API key, edit prompts based on held-out results, use real retailer data, claim a real WhatsApp integration, or imply that approval executes a purchase.</div>
+    </section>
+
+    <section id="demo-script" class="page-break">
+      <div class="eyebrow">What to click and what to say</div>
+      <h2>3. Recommended 12–15 minute presentation flow</h2>
+      <table>
+        <thead><tr><th>Time</th><th>Screen and action</th><th>What I explain</th></tr></thead>
+        <tbody>
+          <tr><td>0:00–0:45</td><td><strong>Overview</strong></td><td>Business problem, synthetic data, nine scenarios, LLM status, and human-review boundary.</td></tr>
+          <tr><td>0:45–4:45</td><td><strong>Inbox → SCN-003 → Run full scenario</strong></td><td>Evidence extraction, unknown revised date, inventory/order impact, alternatives, chosen plan, verifier, and citations.</td></tr>
+          <tr><td>4:45–6:15</td><td><strong>Scenario lab → SCN-004</strong></td><td>Limited cash creates 34 unmet units. The counterfactual shows what changes if the retailer receipt arrives on time.</td></tr>
+          <tr><td>6:15–7:15</td><td><strong>SCN-006</strong></td><td>Two orders match the complaint, so the system asks for the order reference instead of guessing.</td></tr>
+          <tr><td>7:15–8:15</td><td><strong>SCN-007 or SCN-009</strong></td><td>Market signals are deduplicated and labelled unverified; no automatic competitive or assortment action occurs.</td></tr>
+          <tr><td>8:15–9:45</td><td><strong>Retail desk</strong></td><td>Durable cases, retailer history, priority fulfilment, and guarded reply drafts. Approval does not send a message.</td></tr>
+          <tr><td>9:45–11:30</td><td><strong>Evaluation → Run RAG evaluation</strong></td><td>Live 40-query progress, BM25 versus baseline, citation coverage, and per-query drill-down.</td></tr>
+          <tr><td>11:30–13:30</td><td><strong>Evaluation → Run LLM evaluation → Extraction results</strong></td><td>Live current message and 12-item progress, rules versus validated Qwen, poor exact-record score, validation failures, and two visible fallbacks.</td></tr>
+          <tr><td>13:30–15:00</td><td><strong>Close</strong></td><td>Tests, limitations, and production roadmap. Emphasize advisory decision support, not autonomy.</td></tr>
+        </tbody>
+      </table>
+      <div class="say success"><strong>Short seven-minute backup:</strong> Overview → SCN-003 full scenario → SCN-006 clarification → RAG evaluation → closing safety slide. Use this if time is reduced or the model gateway is unavailable.</div>
+      <div class="say warning"><strong>After the LLM evaluation completes:</strong> Streamlit returns to the RAG results tab. Click <strong>Extraction results</strong> manually. This is normal tab behaviour, not a failed run.</div>
+
+      <h3>The sentence I repeat at each layer</h3>
+      <ul>
+        <li><strong>Extraction:</strong> “This is what the message actually says, with exact evidence.”</li>
+        <li><strong>Business state:</strong> “These quantities and rupee values come from versioned synthetic operational data, not from the model.”</li>
+        <li><strong>Planning:</strong> “These are explicit candidates ranked by a stated rule.”</li>
+        <li><strong>RAG:</strong> “These are the policy passages a reviewer can check.”</li>
+        <li><strong>Verification:</strong> “A separate component reconstructs and checks the selected plan.”</li>
+        <li><strong>Review:</strong> “A person decides; the prototype does not execute the business action.”</li>
+      </ul>
+    </section>
+
+    <section id="scenarios" class="page-break">
+      <div class="eyebrow">Reliable examples</div>
+      <h2>4. All nine scenarios I can demonstrate</h2>
+      <p>Use <strong>Inbox → Demo examples → Run full scenario</strong> or select the fixture in <strong>Scenario lab</strong>. Full-scenario mode includes the fixture’s demand, cash, delay, stock, duplicate-report, or observation overlays. Editable intake processes only the visible message.</p>
+
+      <div class="card scenario">
+        <h3>SCN-001 · Normal day <span class="tag green">stock only</span></h3>
+        <div class="input">Normal day planning for Biscuits family carton.</div>
+        <p><strong>Expected:</strong> stock-only; 70/70 pieces fulfilled; zero late and zero unmet; verification valid.</p>
+        <p><strong>Why show it:</strong> proves the planner does not procure unnecessarily when stock is sufficient.</p>
+      </div>
+      <div class="card scenario">
+        <h3>SCN-002 · Demand spike <span class="tag">procurement</span></h3>
+        <div class="input">Demand spike: open orders for Biscuits small carton are expected to rise by 60 percent.</div>
+        <p><strong>Expected:</strong> SUP-001; 112/112 pieces fulfilled; 47 procured; zero late and zero unmet.</p>
+        <p><strong>Why show it:</strong> demonstrates an explicit scenario assumption and per-order ceiling rounding.</p>
+      </div>
+      <div class="card scenario">
+        <h3>SCN-003 · Supplier delay <span class="tag">main demo</span></h3>
+        <div class="input">Sri Venkateswara FMCG Supply reports a two-day delay for Cooking oil 1 L pouch; revised date is not confirmed.</div>
+        <p><strong>Expected:</strong> SUP-002; buy 46 litre units for ₹4,876.46; 102/102 fulfilled; 28 late; zero unmet; arrival 3 Nov; verification valid.</p>
+        <p><strong>Why show it:</strong> the complete vertical slice—evidence, unknowns, alternatives, cash, ranking, verification, citations, and human review.</p>
+      </div>
+      <div class="card scenario">
+        <h3>SCN-004 · Limited cash + delayed retailer payment <span class="tag amber">counterfactual</span></h3>
+        <div class="input">Limited cash for Cooking oil 1 L pouch: RET-003 payment of 30000 rupees expected today is now delayed until 2026-11-08.</div>
+        <p><strong>Expected:</strong> actual stock-only view fulfils 68/102 litre units and leaves 34 unmet. The on-time-receipt counterfactual selects SUP-005.</p>
+        <p><strong>Why show it:</strong> separates the real scenario from a clearly labelled “what if”; it does not hide a cash constraint.</p>
+      </div>
+      <div class="card scenario">
+        <h3>SCN-005 · Stock discrepancy <span class="tag amber">unverified count</span></h3>
+        <div class="input">Stock discrepancy for Biscuits small carton: physical count is 48 pieces against book stock of 63 pieces.</div>
+        <p><strong>Expected:</strong> preserve book stock 63 beside physical count 48; scenario usable stock 50; SUP-001 procures 19; zero unmet.</p>
+        <p><strong>Why show it:</strong> an unverified physical count does not silently overwrite book inventory.</p>
+      </div>
+      <div class="card scenario">
+        <h3>SCN-006 · Retailer delivery complaint <span class="tag amber">clarification</span></h3>
+        <div class="input">My Cooking oil 1 L pouch delivery has not arrived. Please check it.</div>
+        <p><strong>Expected:</strong> two orders match; ask for the order reference; status needs clarification; no allocation plan is created.</p>
+        <p><strong>Why show it:</strong> asking a precise question is safer than choosing an order based on probability.</p>
+      </div>
+      <div class="card scenario">
+        <h3>SCN-007 · Competitor observation <span class="tag">market signal</span></h3>
+        <div class="input">Competitor ValueMart is offering 20 percent off Rice 5 kg bag at a nearby shop in Kukatpally.</div>
+        <p><strong>Expected full fixture:</strong> two unique reports from two distinct reporters; corroborated but unverified; no automatic competitive action.</p>
+        <p><strong>Why show it:</strong> corroboration counts independent reporters, not repeated message volume.</p>
+      </div>
+      <div class="card scenario">
+        <h3>SCN-008 · Combined disruption <span class="tag amber">composed overlays</span></h3>
+        <div class="input">Combined disruption for Cooking oil 1 L pouch: demand up 60 percent, SUP-005 delayed two days, and retailer payment delayed.</div>
+        <p><strong>Expected:</strong> stock-only actual view; 56/166 litre units fulfilled; 110 unmet; on-time-receipt counterfactual selects SUP-005 for 110 units.</p>
+        <p><strong>Why show it:</strong> multiple disruptions are composed once through explicit overlays rather than hardcoded into the planner.</p>
+      </div>
+      <div class="card scenario">
+        <h3>SCN-009 · Smaller-pack request <span class="tag">market signal</span></h3>
+        <div class="input">Customers are requesting Cooking oil 500 ml pouch. Can you supply this smaller pack?</div>
+        <p><strong>Expected full fixture:</strong> nine reported requests from three retailers; no catalogue match; unverified signal; no assortment change.</p>
+        <p><strong>Why show it:</strong> demand evidence can be useful without automatically creating a SKU or changing the assortment.</p>
+      </div>
+
+      <div class="say warning"><strong>Important distinction:</strong> SCN-007’s second reporter and SCN-009’s nine requests exist in the full fixture, not in the single visible sentence. Use <strong>Run full scenario</strong> when stating those aggregate outcomes.</div>
+    </section>
+
+    <section id="architecture" class="page-break">
+      <div class="eyebrow">Technical details without jargon</div>
+      <h2>5. Complete architecture in simple language</h2>
+      <div class="flow">
+        <div class="step"><strong>1. Message</strong>Supplier, retailer, or sales note</div>
+        <div class="step"><strong>2. Intake graph</strong>Contract, dedup, language extraction</div>
+        <div class="step"><strong>3. Validation</strong>Schema, evidence, catalogue, unknowns</div>
+        <div class="step"><strong>4. Business logic</strong>State, overlays, agents, candidates</div>
+        <div class="step"><strong>5. Verification</strong>Independent arithmetic and constraints</div>
+        <div class="step"><strong>6. Human review</strong>Dashboard, cases, citations, drafts</div>
+      </div>
+      <table>
+        <thead><tr><th>Layer</th><th>What it does</th><th>Simple analogy</th></tr></thead>
+        <tbody>
+          <tr><td><strong>FastAPI</strong></td><td>HTTP boundary for messages, scenarios, reviews, retail operations, and evaluations.</td><td>The reception desk between UI and application.</td></tr>
+          <tr><td><strong>Streamlit</strong></td><td>Eight-page operations console: Overview, Inbox, Scenario lab, Decision desk, Retail desk, Operations data, Evaluation, Knowledge.</td><td>The operator’s workspace.</td></tr>
+          <tr><td><strong>LangGraph</strong></td><td>Orchestrates ordered intake and decision stages with shared state.</td><td>A checklist that controls which stage runs next.</td></tr>
+          <tr><td><strong>Pydantic contracts</strong></td><td>Enforce structured message, extraction, event, plan, and recommendation shapes.</td><td>Forms that reject incomplete or wrongly typed output.</td></tr>
+          <tr><td><strong>Rules / Qwen extractor</strong></td><td>Turns free text into intent and entities. The LLM is optional behind the same interface.</td><td>A translator from prose to a structured form.</td></tr>
+          <tr><td><strong>Deterministic agents</strong></td><td>Calculate stock, orders, supplier feasibility, fulfilment, and dated cash.</td><td>Calculators, not creative writers.</td></tr>
+          <tr><td><strong>Candidate planner</strong></td><td>Builds stock-only and feasible supplier plans, records exclusions, and ranks candidates.</td><td>A visible comparison table with a fixed selection policy.</td></tr>
+          <tr><td><strong>SQLite + FTS5 BM25</strong></td><td>Stores demo ledgers/retail records and retrieves ranked knowledge sections.</td><td>A durable notebook plus a fast keyword index.</td></tr>
+          <tr><td><strong>Independent verifier</strong></td><td>Reconstructs allocations and checks arithmetic, dates, costs, cash, MOQ, capacity, and state references.</td><td>A second accountant checking the first accountant’s work.</td></tr>
+          <tr><td><strong>pytest + scenario evaluator</strong></td><td>Protect unit/API behaviour and all nine fixture outcomes.</td><td>A repeatable rehearsal before every demo.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>What the LLM does—and does not do</h3>
+      <div class="grid-2">
+        <div class="card"><h4>LLM responsibility</h4><ul><li>Classify the message intent.</li><li>Extract stated entities into a strict structure.</li><li>Provide exact evidence spans.</li><li>Leave unstated fields null.</li></ul></div>
+        <div class="card"><h4>Not an LLM responsibility</h4><ul><li>No inventory or order arithmetic.</li><li>No supplier ranking or cash calculation.</li><li>No fabricated dates, quantities, SKUs, or PO references.</li><li>No autonomous approval or operational execution.</li></ul></div>
+      </div>
+
+      <h3>Validation before planning</h3>
+      <ol>
+        <li>The model output must match the expected schema.</li>
+        <li>Every evidence span must occur verbatim in the original message.</li>
+        <li>Product and business references must agree with the catalogue/state.</li>
+        <li>Unknown or ambiguous information stays unknown or triggers clarification.</li>
+        <li>Model errors and validation violations fall back to deterministic rules and remain visible in evaluation.</li>
+      </ol>
+      <div class="say"><strong>Best explanation:</strong> “The model proposes structured facts. It does not get trusted merely because its JSON looks fluent. Deterministic gates decide whether that structure is safe enough to enter the workflow.”</div>
+
+      <h3>Data sources are deliberately separated</h3>
+      <table>
+        <thead><tr><th>Source</th><th>Examples</th><th>Used for</th></tr></thead>
+        <tbody>
+          <tr><td>Versioned synthetic business state</td><td>Products, inventory, open orders, suppliers, offers, cash</td><td>All quantities, prices, balances, and feasibility calculations</td></tr>
+          <tr><td>Scenario fixtures</td><td>Demand uplift, delayed receipt, physical count, supplier delay</td><td>Immutable “what-if” overlays without mutating base CSV data</td></tr>
+          <tr><td>Curated knowledge corpus</td><td>Policies, SOPs, supplier terms, case notes, regulatory extracts</td><td>Cited policy/procedure context only</td></tr>
+          <tr><td>Evaluation-only labels</td><td>40 retrieval questions and 12 held-out extraction records</td><td>Measurement, never live business state or prompt tuning</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="worked-example" class="page-break">
+      <div class="eyebrow">The numbers behind the main demo</div>
+      <h2>6. SCN-003 worked calculation</h2>
+      <p>Use this section if the mentor asks, “How did the system arrive at that recommendation?”</p>
+      <h3>Step 1 — Establish usable stock</h3>
+      <table>
+        <tbody>
+          <tr><td>On hand</td><td>62 litre units</td></tr>
+          <tr><td>Reserved</td><td>−6</td></tr>
+          <tr><td>Incoming</td><td>+12</td></tr>
+          <tr><td>Delayed incoming assumption</td><td>−12</td></tr>
+          <tr><th>Immediately usable</th><th>56 litre units</th></tr>
+        </tbody>
+      </table>
+      <p>The message does not state delayed quantity. Treating all 12 incoming units as delayed is an explicit scenario assumption, not an extracted fact.</p>
+
+      <h3>Step 2 — Calculate the shortage</h3>
+      <div class="say"><strong>102 requested − 56 usable = 46 litre units to procure.</strong><br>There are six open orders. Their requested dates and quantities come from state, not from the supplier’s message.</div>
+
+      <h3>Step 3 — Compare explicit candidates</h3>
+      <table>
+        <thead><tr><th>Supplier</th><th>Quantity</th><th>Unit cost</th><th>Total</th><th>Scenario arrival</th></tr></thead>
+        <tbody>
+          <tr><td>SUP-002</td><td>46</td><td>₹106.01</td><td>₹4,876.46</td><td>3 Nov 2026</td></tr>
+          <tr><td>SUP-003</td><td>46</td><td>₹102.35</td><td>₹4,708.10</td><td>4 Nov 2026</td></tr>
+          <tr><td>SUP-005, delayed</td><td>46</td><td>₹94.41</td><td>₹4,342.86</td><td>4 Nov 2026</td></tr>
+        </tbody>
+      </table>
+      <p>All supplier plans fulfil 102 units, leave 28 late, and leave zero unmet. SUP-002 wins because its scenario arrival is earlier.</p>
+
+      <h3>Step 4 — Apply the fixed ranking rule</h3>
+      <pre><code>(unmet units, late units, arrival date, total cost, candidate ID)</code></pre>
+      <ol>
+        <li>Fewer unmet units wins first.</li>
+        <li>Fewer late units wins second.</li>
+        <li>Earlier arrival wins third.</li>
+        <li>Lower cost breaks a later tie.</li>
+        <li>Candidate ID makes the final result repeatable.</li>
+      </ol>
+      <div class="say warning"><strong>If asked “Why not the cheapest supplier?”:</strong> “This prototype deliberately prioritizes service before cost. All plans have the same unmet and late totals, so earlier arrival outranks price. That is a transparent policy choice, not a claim that SUP-002 is universally optimal.”</div>
+
+      <h3>Step 5 — Check cash</h3>
+      <table>
+        <tbody>
+          <tr><td>Opening cash</td><td>₹250,000.00</td></tr>
+          <tr><td>Immediate procurement outflow</td><td>−₹4,876.46</td></tr>
+          <tr><th>Ending cash</th><th>₹245,123.54</th></tr>
+          <tr><td>Minimum cash buffer</td><td>₹50,000.00</td></tr>
+          <tr><th>Headroom</th><th>₹195,123.54</th></tr>
+        </tbody>
+      </table>
+      <p>Money uses exact <code>Decimal</code> rupees with two decimal places. Payment terms are not modelled; immediate outflow is a conservative assumption.</p>
+
+      <h3>Step 6 — Verify and leave for review</h3>
+      <p>The verifier reconstructs allocations and checks order references, quantities, stock limits, supplier offer, MOQ, capacity, cost, arrival, totals, and cash. The expected result is <strong>valid</strong>, with recommendation status <strong>pending_review</strong>.</p>
+      <div class="say success"><strong>Closing line for SCN-003:</strong> “The recommendation is explainable down to the original evidence, every operational number, the ranking policy, the policy citations, and an independent verification result. It still waits for a human.”</div>
+    </section>
+
+    <section id="rag" class="page-break">
+      <div class="eyebrow">Evidence, not decoration</div>
+      <h2>7. RAG explained and measured</h2>
+      <p><strong>RAG means Retrieval-Augmented Generation.</strong> In this project its clearest role is retrieval of approved policy and procedure passages for review. The retriever does not invent inventory numbers and does not choose the supplier.</p>
+      <div class="say"><strong>Simple answer:</strong> “When the reviewer asks why a rule applies, the system shows the relevant document section, exact quote, document ID, effective date, and licence. RAG supplies checkable context; business state supplies operational numbers.”</div>
+
+      <h3>What is inside the corpus?</h3>
+      <ul>
+        <li><strong>30 documents and 186 sections:</strong> 27 synthetic policies, SOPs, supplier terms, and case notes, plus three cited public regulatory extracts.</li>
+        <li>Sources, licences, effective dates, and retrieval provenance are recorded in <code>docs/RAG_CORPUS_SOURCES.md</code>.</li>
+        <li>The current curated corpus is approximately <strong>89.1 KiB</strong>. Quality and relevance matter more than file size.</li>
+        <li>The review card shows up to three relevant sections. SCN-003 citation coverage includes <code>POL-DLY-001</code>, <code>POL-CSH-002</code>, and <code>CASE-2026-014</code>.</li>
+      </ul>
+
+      <h3>Why SQLite FTS5 + BM25 instead of embeddings?</h3>
+      <p>The corpus is small, curated, mostly English, and contains exact policy terms. BM25 gives deterministic, local, millisecond-scale retrieval with no model download or network call. It was measured against a simple whole-document term-frequency baseline rather than assumed to be better.</p>
+      <table>
+        <thead><tr><th>Metric</th><th>BM25 used here</th><th>Term-frequency baseline</th><th>Plain meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Primary@1</td><td><strong>77.5%</strong></td><td>62.5%</td><td>The canonical expected document is first.</td></tr>
+          <tr><td>Recall@3</td><td><strong>100%</strong></td><td>92.5%</td><td>Expected or accepted alternative appears in top three.</td></tr>
+          <tr><td>Recall@5</td><td><strong>100%</strong></td><td>—</td><td>Expected or accepted alternative appears in top five.</td></tr>
+          <tr><td>MRR</td><td><strong>0.855</strong></td><td>0.767</td><td>Higher means the expected document tends to appear earlier.</td></tr>
+          <tr><td>Latest verified local latency</td><td>p50 3.2 ms; p95 5.4 ms</td><td>—</td><td>Hardware-dependent retrieval time, not model response time.</td></tr>
+        </tbody>
+      </table>
+      <p class="small muted">Measured on 40 frozen golden queries in the verified dashboard run on 17 Nov 2026. The baseline MRR is 0.7675, displayed as 0.767 in the UI.</p>
+
+      <h3>Citation checks</h3>
+      <ul>
+        <li>3/3 displayed references contain a non-empty verbatim quote.</li>
+        <li>3/3 contain document, effective-date, and licence provenance.</li>
+        <li>3/3 are effective on the scenario date, 1 Nov 2026.</li>
+        <li>SCN-003 citation coverage explicitly uses rules extraction so this retrieval check does not accidentally call the LLM.</li>
+      </ul>
+      <div class="say warning"><strong>Known RAG limitation:</strong> primary@1 is not 100%. Short sections and repeated policy wording can put an acceptable SOP or terms sheet above the canonical policy. Document-level scoring, a reranker, or multilingual embeddings are future improvements—not features I should claim are already present.</div>
+    </section>
+
+    <section id="evaluation" class="page-break">
+      <div class="eyebrow">Show the weaknesses honestly</div>
+      <h2>8. LLM extraction evaluation</h2>
+      <p>The Evaluation page compares deterministic rules with the <strong>validated Qwen pipeline</strong> on 12 synthetic held-out messages. “Validated pipeline” means the model output is checked; model errors or validation violations trigger rules fallback.</p>
+      <div class="say danger"><strong>Evaluation integrity:</strong> these 12 records are evaluation-only. They are not used for prompt tuning, rule tuning, few-shot examples, or retrieval-query construction. The small set demonstrates the measurement harness; it does not prove production-grade accuracy.</div>
+
+      <h3>Latest verified run · 17 Nov 2026</h3>
+      <table>
+        <thead><tr><th>Metric</th><th>Rules</th><th>Validated Qwen pipeline</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Intent accuracy</td><td>41.7%</td><td><strong>58.3%</strong></td><td>Correct message category.</td></tr>
+          <tr><td>All entity slots</td><td>74.2%</td><td>74.2%</td><td>Includes correctly preserved null/unknown fields.</td></tr>
+          <tr><td>Stated-fact accuracy</td><td>30.4%</td><td>30.4%</td><td>Only fields explicitly present in the source message.</td></tr>
+          <tr><td>Exact record match</td><td>8.3%</td><td><strong>0.0%</strong></td><td>Intent and every labelled entity must all be correct.</td></tr>
+          <tr><td>Validation pass rate</td><td>58.3%</td><td><strong>83.3%</strong></td><td>Output accepted without rules fallback.</td></tr>
+          <tr><td>Verbatim evidence</td><td>100%</td><td>100%</td><td>Retained evidence occurs exactly in the source.</td></tr>
+          <tr><td>Rules fallbacks</td><td>0</td><td><strong>2</strong></td><td>Model failures replaced by deterministic rules.</td></tr>
+          <tr><td>Latency p50</td><td>0.6 ms</td><td>2,215.5 ms</td><td>Median time per message in this run.</td></tr>
+          <tr><td>Latency p95</td><td>1.1 ms</td><td>4,512.4 ms</td><td>Nearest-rank 95th-percentile time.</td></tr>
+        </tbody>
+      </table>
+      <p class="small muted">Qwen/Qwen3-8B · prompt 2026-11-09.3 · taxonomy 0.1. Exact timings and model outputs can vary between runs; report the visible current run rather than promising fixed values.</p>
+
+      <h3>How to present these numbers</h3>
+      <div class="say"><strong>Say this:</strong> “The model improves intent classification on this small set, but strict exact-record performance is poor. I do not hide that. The dashboard exposes each message, expected and predicted fields, validation failures, fallbacks, evidence, and latency. This tells me the extraction layer needs more work before any real-world claim.”</div>
+      <ul>
+        <li>Open <strong>HOLD-0008</strong> or <strong>HOLD-0010</strong> in the drill-down to show a rules fallback.</li>
+        <li>The visible validation violation is <code>no_intent_classified</code>; the final pipeline output comes from rules.</li>
+        <li>Do not tune the prompt live to make the held-out score look better; that would contaminate the evaluation.</li>
+        <li>Do not quote only the 100% evidence metric. It applies to retained evidence and does not mean the entire record is correct.</li>
+      </ul>
+
+      <h3>Evaluation progress shown live</h3>
+      <ul>
+        <li>Current query or held-out message.</li>
+        <li>Completed/total count and elapsed time.</li>
+        <li>Current activity, detailed explanation, and per-item outcome.</li>
+        <li>Validation failures and fallback status.</li>
+        <li>Final metrics and row-level drill-down evidence.</li>
+      </ul>
+      <p>These are real background API jobs, not simulated timers. Latest completed results survive Streamlit reruns but are cleared when the API restarts.</p>
+    </section>
+
+    <section id="retail" class="page-break">
+      <div class="eyebrow">Beyond inventory planning</div>
+      <h2>9. Retail desk and durable review workflows</h2>
+      <table>
+        <thead><tr><th>Feature</th><th>What to demonstrate</th><th>Boundary</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Priority fulfilment</strong></td><td>Open orders ranked by order priority, requested date, retailer service priority, order date, and ID.</td><td>An additive analytical view; SCN-003 retains its first-come planner. Incompatible units are not converted.</td></tr>
+          <tr><td><strong>Durable cases</strong></td><td>Repeat-complaint linking, assignment, priority, activity history, and guarded lifecycle transitions.</td><td>Resolution requires a staff note. Failed writes and duplicate delivery do not create false success.</td></tr>
+          <tr><td><strong>Reply drafts</strong></td><td>Deterministic English, Hinglish, and Hindi acknowledgement drafts with review.</td><td>Edits are checked for unsupported money, dates, commitments, causes, substitutes, questions, and numbers. Approval does not send.</td></tr>
+          <tr><td><strong>Retailer history</strong></td><td>Orders, priority allocation, cases, and recurring issues in one view.</td><td>Historical context supports a reviewer; it does not autonomously decide service or credit.</td></tr>
+          <tr><td><strong>Market observations</strong></td><td>Signals grouped by competitor, product, offer, area, and reporter.</td><td>Only stable non-empty distinct reporter IDs count as corroboration; signals remain unverified.</td></tr>
+          <tr><td><strong>Indicative availability</strong></td><td>Current base-unit stock and open-order allocation for a matching product request.</td><td>Not an order confirmation or reservation; incoming supply is not included.</td></tr>
+        </tbody>
+      </table>
+      <p>Completed intake persists interactions, cases, drafts, and observations in <code>data/runtime/retail.sqlite3</code>. The bundled retail write is one idempotent SQLite transaction keyed by event ID.</p>
+      <div class="say"><strong>Safe demo wording:</strong> “The system prepares and guards the review workflow. A staff member can approve a draft, but that approval does not send it. Marking sent only records a separate manual staff action.”</div>
+    </section>
+
+    <section id="safety" class="page-break">
+      <div class="eyebrow">What I should and should not claim</div>
+      <h2>10. Safety, limitations, and honest scope</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Implemented</h3>
+          <ul>
+            <li>Nine repeatable scenario fixtures.</li>
+            <li>Optional validated Qwen extraction with rules fallback.</li>
+            <li>Deterministic planning, dated cash, exclusions, and counterfactuals.</li>
+            <li>Independent plan verification.</li>
+            <li>Curated BM25 retrieval with citations.</li>
+            <li>Durable retail cases, drafts, interactions, and observations.</li>
+            <li>RAG and extraction evaluation dashboards.</li>
+            <li>114 passing tests and nine passing scenario evaluations in the verified build.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Not claimed</h3>
+          <ul>
+            <li>No live ERP, WhatsApp, email, or supplier-portal integration.</li>
+            <li>No automatic purchase, payment, pricing, credit, stock, or assortment action.</li>
+            <li>No substantive automatic retailer/supplier message.</li>
+            <li>No production authentication, tenant isolation, or complete audit deployment.</li>
+            <li>No proof of accuracy on real business messages.</li>
+            <li>No vector database or multilingual embedding retriever.</li>
+            <li>No general mathematical optimizer or multi-supplier transport optimization.</li>
+            <li>No commercial production readiness.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Important technical limitations</h3>
+      <ul>
+        <li>All business data and evaluation records shown here are synthetic.</li>
+        <li>The 40 retrieval questions are self-written and the 12 extraction records are a very small held-out set.</li>
+        <li>The model’s strict extraction results are weak; more data, error analysis, and controlled iteration are needed on separate tuning examples.</li>
+        <li>BM25 can rank overlapping wording imperfectly and is limited for semantic multilingual retrieval.</li>
+        <li>Scenario ranking is a fixed lexicographic policy, not a universally optimal business objective.</li>
+        <li>Supplier payment terms, substitutions, partial shipments, multi-supplier splits, and transport constraints are not modelled.</li>
+        <li>Evaluation job history is in memory and disappears on API restart; durable retail/review records are separate.</li>
+      </ul>
+
+      <h3>Privacy and safety wording</h3>
+      <div class="say"><strong>Say this:</strong> “The demo uses fictional synthetic data. Real pilot data would require permission, minimization, de-identification, restricted access, retention rules, and authorization before any external model processing. Secrets remain in a gitignored environment file and are never shown or committed.”</div>
+      <div class="say"><strong>Approval wording:</strong> “Approval changes only demo/review state. It never executes an impactful operation. An approved-action integration would require separate credentials, authorization, idempotency, audit, and explicit action contracts.”</div>
+
+      <h3>Words to avoid</h3>
+      <table>
+        <thead><tr><th>Do not say</th><th>Say this instead</th></tr></thead>
+        <tbody>
+          <tr><td>“Fully autonomous AI distributor.”</td><td>“Human-reviewed operational decision support.”</td></tr>
+          <tr><td>“The LLM calculates the best plan.”</td><td>“The LLM extracts language; deterministic code calculates and ranks plans.”</td></tr>
+          <tr><td>“RAG generates our inventory answer.”</td><td>“RAG retrieves policy evidence; state and code generate the operational analysis.”</td></tr>
+          <tr><td>“The model never hallucinates.”</td><td>“Validation, exact evidence, unknown handling, fallback, and verification reduce risk; measured errors remain.”</td></tr>
+          <tr><td>“The system is 100% accurate.”</td><td>“Recall@3 is 100% on 40 frozen retrieval queries; other metrics and extraction results are reported separately.”</td></tr>
+          <tr><td>“Approval places the order.”</td><td>“Approval updates only demo/review state.”</td></tr>
+          <tr><td>“Production ready.”</td><td>“Integrated academic prototype with a documented production roadmap.”</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="faq" class="page-break">
+      <div class="eyebrow">Mentor questions</div>
+      <h2>11. FAQs and answers I can reuse</h2>
+
+      <h3>Project purpose and design</h3>
+      <div class="qa"><div class="question">1. What problem does BharatBiz AI solve?</div><div class="answer">It helps an FMCG distributor turn messy operational messages into evidence-linked events and reviewable recommendations. Examples include supplier delays, demand spikes, limited cash, stock discrepancies, delivery complaints, and market observations. It reduces manual checking while keeping the final decision with a person.</div></div>
+      <div class="qa"><div class="question">2. Who is the intended user?</div><div class="answer">A distributor’s operations planner, retailer-service staff, or sales manager. The dashboard is an operator workspace rather than a consumer chatbot: it shows evidence, alternatives, exclusions, verification, cases, and policy citations.</div></div>
+      <div class="qa"><div class="question">3. Is this just a chat application?</div><div class="answer">No. Chat is only one intake surface. The main system is a decision workflow with contracts, business-state analysis, candidate planning, RAG citations, verification, durable retail review, evaluation, and human approval.</div></div>
+      <div class="qa"><div class="question">4. What is the main architectural principle?</div><div class="answer">Separate probabilistic language understanding from deterministic business authority. AI can interpret a message, but state supplies numbers, code calculates plans, a verifier checks them, and a human approves the review.</div></div>
+      <div class="qa"><div class="question">5. What did you personally work on?</div><div class="answer">“This was a team capstone. My work focused on the dashboard and integrated demonstration, scenario/evaluation presentation, integration checks, and validation of the complete workflow. I can explain how the team’s extraction, planning, RAG, retail, and evaluation modules connect through shared contracts.” Adjust this to match the final team record; do not claim sole ownership of teammates’ modules.</div></div>
+
+      <h3>LLM and extraction</h3>
+      <div class="qa"><div class="question">6. Where exactly is AI used?</div><div class="answer">The optional Qwen extractor classifies intent and extracts entities with evidence spans from free-form messages. It is behind the same interface as the deterministic rules extractor, so the rest of the workflow receives the same structured contract.</div></div>
+      <div class="qa"><div class="question">7. Why keep rules if an LLM is available?</div><div class="answer">Rules provide a no-key reproducible baseline, fast deterministic comparisons, and a fallback when model output fails or violates validation. The Evaluation page measures both rather than assuming the model is better.</div></div>
+      <div class="qa"><div class="question">8. Why not let the LLM choose the supplier?</div><div class="answer">Supplier selection requires exact stock, order, cost, capacity, date, and cash constraints. Deterministic code is auditable and repeatable, while an independent verifier can reconstruct the result. An LLM is not the authority for arithmetic or operational feasibility.</div></div>
+      <div class="qa"><div class="question">9. How do you prevent hallucinated facts?</div><div class="answer">I reduce rather than eliminate the risk. Output must satisfy a schema, evidence spans must be verbatim, catalogue references are checked, unknowns remain null, ambiguity triggers clarification, and invalid model output falls back to rules. The measured errors remain visible.</div></div>
+      <div class="qa"><div class="question">10. What happens when a revised delivery date is not stated?</div><div class="answer">It remains unknown. A two-day delay does not prove a revised date. The planner may calculate a scenario arrival from state and lead time, but labels that as a planning estimate, not a supplier commitment.</div></div>
+      <div class="qa"><div class="question">11. What happens when a product is ambiguous?</div><div class="answer">The system asks for clarification instead of guessing a SKU. The same principle appears in SCN-006: two matching orders mean the order reference is required before case review.</div></div>
+      <div class="qa"><div class="question">12. How do you handle prompt injection in a supplier message?</div><div class="answer">The message is treated as data, not instructions. The model must return a fixed extraction contract, and downstream stages only accept validated fields. Operational calculations and approval rules are deterministic and do not follow instructions embedded in message text.</div></div>
+
+      <h3>RAG and knowledge</h3>
+      <div class="qa"><div class="question">13. Why does this project need RAG?</div><div class="answer">A reviewer needs to know which policy, SOP, supplier term, or case rule supports a recommendation. RAG retrieves those passages with provenance so the reviewer can inspect the rule instead of trusting generated prose.</div></div>
+      <div class="qa"><div class="question">14. Does RAG provide stock, price, or cash values?</div><div class="answer">No. Versioned synthetic business state is the only source for those operational values. Retrieved documents provide policy and procedure context, and this separation prevents a document excerpt from becoming fake live state.</div></div>
+      <div class="qa"><div class="question">15. Why BM25 instead of vector search?</div><div class="answer">The current corpus is small, curated, and rich in exact policy terms. BM25 is local, deterministic, inexpensive, and measurable, and it outperformed the simple term-frequency baseline. Embeddings become more attractive for larger or multilingual semantic workloads.</div></div>
+      <div class="qa"><div class="question">16. What documents are included?</div><div class="answer">Thirty approved documents: 27 synthetic policies, SOPs, supplier terms, and case notes, plus three cited public regulatory extracts. The corpus register records source and provenance. The project does not claim that a large document count or file size equals usefulness.</div></div>
+      <div class="qa"><div class="question">17. How do citations remain trustworthy?</div><div class="answer">Quotes come verbatim from indexed sections, not generated summaries. Each reference includes document ID, effective date, and licence; retrieval filters documents by the scenario date. The evaluation checks all three SCN-003 references for these properties.</div></div>
+      <div class="qa"><div class="question">18. What do primary@1, recall@3, and MRR mean?</div><div class="answer">Primary@1 checks whether the canonical document is first. Recall@3 accepts the expected or labelled alternative in the first three. MRR rewards appearing earlier. Reporting all three avoids hiding weak first-rank performance behind perfect top-three recall.</div></div>
+
+      <h3>Planning, verification, and scenarios</h3>
+      <div class="qa"><div class="question">19. How is the recommended plan selected?</div><div class="answer">The planner creates stock-only and feasible supplier candidates, records exclusions, then sorts by unmet units, late units, scenario arrival, cost, and candidate ID. This lexicographic order is explicit and deterministic.</div></div>
+      <div class="qa"><div class="question">20. Why is the verifier called independent?</div><div class="answer">It does not trust the recommendation’s totals. It reconstructs allocations from original state and orders, then checks quantities, dates, offer terms, costs, cash, and constraint violations. A violation prevents a normal reviewable recommendation.</div></div>
+      <div class="qa"><div class="question">21. What is a scenario overlay?</div><div class="answer">An immutable “what-if” change such as 60% demand uplift, delayed receipt, or physical stock count. It is applied to a copy of the planning view without editing base synthetic CSV files. Multiple overlays can be composed for SCN-008.</div></div>
+      <div class="qa"><div class="question">22. What is the counterfactual in SCN-004?</div><div class="answer">The actual scenario has a delayed retailer receipt and cannot support immediate procurement, so 34 units remain unmet. A separate clearly labelled counterfactual asks what would happen if receipts were on time; it selects SUP-005. The system does not confuse that hypothetical with reality.</div></div>
+      <div class="qa"><div class="question">23. Is this a formal optimizer?</div><div class="answer">It is a deterministic candidate generator and lexicographic ranker, not a general mathematical optimization solver. That is appropriate for the transparent capstone scope. A future version could replace the ranking policy with a configurable or formal optimizer behind the same verifier.</div></div>
+      <div class="qa"><div class="question">24. Why does the system sometimes return an unmet plan?</div><div class="answer">Because a safe feasible purchase may not exist under cash or supplier constraints. The system exposes the shortfall rather than inventing money, supplier capacity, or stock. An unmet result can be the correct advisory outcome.</div></div>
+
+      <h3>Retail workflows</h3>
+      <div class="qa"><div class="question">25. How do you handle repeated competitor reports?</div><div class="answer">Duplicate deliveries are deduplicated, and corroboration counts distinct stable reporter IDs. Two reports from one person are not treated as independent confirmation. Even corroborated signals remain unverified and create no automatic pricing or assortment action.</div></div>
+      <div class="qa"><div class="question">26. What guards retailer reply drafts?</div><div class="answer">Drafts are deterministic acknowledgement templates. Staff edits are checked for unsupported commitments, money, dates, causes, substitutes, questions, and numbers. Approval is one-time and does not send or resolve the case; marking sent records a separate manual action.</div></div>
+      <div class="qa"><div class="question">27. Is the retail workflow durable?</div><div class="answer">Completed intake writes interactions, cases, drafts, and observations through one idempotent SQLite transaction keyed by event ID. Clarification rounds, duplicate deliveries, direct scenario runs, and failed writes are prevented from creating false persistence success.</div></div>
+
+      <h3>Evaluation and engineering</h3>
+      <div class="qa"><div class="question">28. What does “held out” mean?</div><div class="answer">The 12 extraction examples are reserved for measurement and excluded from prompts, rules tuning, examples, and retrieval-query construction. This reduces direct overfitting. They are still synthetic and too few for broad production claims.</div></div>
+      <div class="qa"><div class="question">29. Why is exact-record accuracy so low?</div><div class="answer">Exact-record is strict: intent and every labelled entity must be correct. The current rules and Qwen pipelines miss fields or classify some messages incorrectly. I show this because the purpose of evaluation is to locate improvement work, not to advertise the strongest single number.</div></div>
+      <div class="qa"><div class="question">30. Is twelve examples enough?</div><div class="answer">No, not for a production accuracy claim. It is enough to demonstrate a reproducible evaluation harness, progress visibility, validation/fallback inspection, and honest metric reporting. The next step is a larger independently labelled tuning set and a separate held-out set.</div></div>
+      <div class="qa"><div class="question">31. Do the results generalize to real distributor messages?</div><div class="answer">That has not been proven. All reported results are on synthetic data and self-written queries. Real evaluation requires authorized, de-identified examples and domain review, reported separately from synthetic measurements.</div></div>
+      <div class="qa"><div class="question">32. Which technologies did you use?</div><div class="answer">Python, FastAPI, Pydantic, LangGraph, Streamlit, SQLite, FTS5 BM25, exact Decimal arithmetic, an OpenAI-compatible Qwen endpoint, and pytest. The model is optional; deterministic scenarios remain runnable without it.</div></div>
+      <div class="qa"><div class="question">33. How do you know the integrated project works?</div><div class="answer">The verified build has 114 passing Python tests and 9/9 passing scenario evaluations. Browser checks covered live RAG and extraction progress, final metrics, drill-downs, fallback warnings, and the other dashboard pages. These verify the implemented demo, not real-world performance.</div></div>
+      <div class="qa"><div class="question">34. How are privacy and secrets handled?</div><div class="answer">The demo uses synthetic data. API keys stay in a gitignored environment file and are not committed or displayed. Real data would require permission, minimization, de-identification, restricted access, retention rules, and explicit authorization for model processing.</div></div>
+      <div class="qa"><div class="question">35. What would production require?</div><div class="answer">Authenticated channels and users, tenant isolation, transactional system-of-record integration, stronger audit and idempotency, monitored model quality, larger real-world evaluations, configurable business policy, and a separately authorized approved-action outbox. Operational execution remains outside this capstone.</div></div>
+      <div class="qa"><div class="question">36. What is the next most valuable improvement?</div><div class="answer">Improve extraction using a larger independently labelled tuning set while keeping the current held-out set untouched, then evaluate on a new held-out set. In parallel, add real reviewer-labelled retrieval questions. I would improve measured weak points rather than add more cosmetic AI features.</div></div>
+    </section>
+
+    <section id="trouble" class="page-break">
+      <div class="eyebrow">Stay calm and recover</div>
+      <h2>12. Demo troubleshooting</h2>
+      <table>
+        <thead><tr><th>What I see</th><th>Likely reason</th><th>What I do</th></tr></thead>
+        <tbody>
+          <tr><td>“Cannot reach API”</td><td>API stopped or dashboard points to the wrong port.</td><td>Start API on 8011 and set <code>BHARATBIZ_API_URL</code> before starting Streamlit.</td></tr>
+          <tr><td>Run LLM evaluation is disabled</td><td>Model is not configured or gateway is unavailable.</td><td>Use deterministic scenario demos. If time permits, run <code>python scripts/check_llm.py</code> privately; never reveal the key.</td></tr>
+          <tr><td>Extraction run finishes but RAG tab appears</td><td>Streamlit returns to the first tab after rerun.</td><td>Click <strong>Extraction results</strong>.</td></tr>
+          <tr><td>Previous evaluation results disappeared</td><td>API restarted; latest evaluation jobs are in memory.</td><td>Run the evaluation again. This does not affect durable retail records.</td></tr>
+          <tr><td>Full-scenario totals do not appear after editable intake</td><td>Plain intake does not apply fixture overlays.</td><td>Use <strong>Run full scenario</strong> for canonical totals and aggregates.</td></tr>
+          <tr><td>Approval did not place an order or send a reply</td><td>Intentional safety boundary.</td><td>Explain that approval changes only demo/review state; no operational execution is in scope.</td></tr>
+          <tr><td>Model metrics differ slightly on another run</td><td>Model serving and latency can vary.</td><td>Report the visible run and date. Never adjust labels or prompts during the demo.</td></tr>
+          <tr><td>Dashboard looks stale after a code change</td><td>The long-running process has old imported code.</td><td>Restart Streamlit before the presentation and recheck RAG and Extraction tabs.</td></tr>
+        </tbody>
+      </table>
+      <div class="say success"><strong>If anything fails live:</strong> “The deterministic scenario path is the reliable baseline, so I’ll use that to show the decision workflow. The evaluation dashboard already records the model limitation rather than hiding it.” Then continue with SCN-003 and SCN-006.</div>
+
+      <h3>My closing answer</h3>
+      <div class="say"><strong>Say this:</strong> “To conclude, BharatBiz AI demonstrates an evidence-backed and safety-conscious way to use AI in distributor operations. The LLM helps with language, RAG makes policy evidence inspectable, deterministic code performs the calculations, an independent verifier checks the result, and a human retains authority. We have nine repeatable scenarios and measured evaluation dashboards, but we are equally clear about weak extraction scores, synthetic-only evidence, and the production integrations still required.”</div>
+
+      <h3>Final memory card</h3>
+      <div class="grid-2">
+        <div class="card"><strong>Main scenario</strong><br>SCN-003 → SUP-002 → 46 units → ₹4,876.46 → 102 fulfilled → 28 late → 0 unmet → valid.</div>
+        <div class="card"><strong>Clarification scenario</strong><br>SCN-006 → two orders match → ask order reference → no allocation plan.</div>
+        <div class="card"><strong>Cash scenario</strong><br>SCN-004 → 34 unmet actual → on-time-receipt counterfactual selects SUP-005.</div>
+        <div class="card"><strong>Evaluation honesty</strong><br>RAG recall@3 100%, primary@1 77.5%; Qwen intent 58.3%, exact record 0%, two fallbacks in latest verified run.</div>
+      </div>
+      <div class="footer-note">Source of truth: current integrated repository code and fixtures, README, RAG evaluation documentation, held-out evaluation contract, 114-test regression run, 9/9 scenario evaluator run, and browser verification on 17 Nov 2026. This handbook is a personal presentation aid, not a claim of production deployment.</div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

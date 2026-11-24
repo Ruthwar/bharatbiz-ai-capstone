@@ -7,11 +7,14 @@
     "message_id": "DEMO-SCN-008-001",
     "source_type": "synthetic",
     "text": "Combined disruption for Cooking oil 1 L pouch: demand up 60 percent, SUP-005 delayed two days, and retailer payment delayed.",
-    "observed_at": "2026-11-01T13:00:00+05:30",
+    "observed_at": "2026-11-23T13:00:00+05:30",
     "language": "English",
     "consent_status": "synthetic",
-    "state_version": "synthetic-v2-seed-20261105",
-    "sender": {"party_type": "sales_rep", "channel": "api"}
+    "state_version": "synthetic-v3-live-20261123",
+    "sender": {
+      "party_type": "sales_rep",
+      "channel": "api"
+    }
   },
   "overlays": {
     "demand_multiplier": "1.60",
@@ -25,11 +28,11 @@
         "receipt_id": "RCPT-SCN-008-001",
         "retailer_id": "RET-003",
         "amount_rupees": "30000.00",
-        "expected_date": "2026-11-01",
-        "actual_date": "2026-11-08"
+        "expected_date": "2026-11-23",
+        "actual_date": "2026-11-30"
       }
     ],
-    "planning_horizon": "2026-11-04",
+    "planning_horizon": "2026-11-26",
     "procurement_costs": "immediate_outflow"
   },
   "assumptions": {
@@ -39,7 +42,11 @@
     "minimum_cash_buffer_rupees": "50000.00",
     "procurement_costs": "immediate_outflow"
   },
-  "unknowns": ["supplier_confirmed_revised_delivery_date", "retailer_confirmed_actual_payment_date", "observed_sell_through_after_the_spike"],
+  "unknowns": [
+    "supplier_confirmed_revised_delivery_date",
+    "retailer_confirmed_actual_payment_date",
+    "observed_sell_through_after_the_spike"
+  ],
   "expected": {
     "review_status": "pending_review",
     "selected_candidate_id": "stock-only",

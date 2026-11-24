@@ -27,7 +27,7 @@ Every message is interpreted against one version of the business state. The vers
 
 - Every inbound submission carries a `state_version` string.
 - The loaded business state carries its own `state_version`.
-- The two must match exactly. The current demo state is `synthetic-v2-seed-20261105`.
+- The two must match exactly. The current demo state is `synthetic-v3-live-20261123`.
 - The review record stores the state version shown to the approver.
 
 ## 3. Mismatch handling

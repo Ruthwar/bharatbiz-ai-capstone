@@ -1,6 +1,6 @@
 {
-  "state_version": "synthetic-v2-seed-20261105",
-  "as_of_date": "2026-11-01",
+  "state_version": "synthetic-v3-live-20261123",
+  "as_of_date": "2026-11-23",
   "opening_cash_rupees": "250000.00",
   "minimum_cash_buffer_rupees": "50000.00",
   "source_type": "synthetic",

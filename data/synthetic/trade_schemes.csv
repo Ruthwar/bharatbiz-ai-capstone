@@ -1,0 +1,5 @@
+scheme_id,scheme_name,sku_id,supplier_id,discount_percent,min_quantity_units,valid_from,valid_to,status,source_type
+SCM-001,Biscuit carton volume scheme,SKU-005,SUP-001,5.00,20,2026-11-08,2026-11-30,approved,synthetic
+SCM-002,Cooking oil litre scheme,SKU-003,SUP-002,7.50,40,2026-11-10,2026-11-24,approved,synthetic
+SCM-003,Rice bulk scheme,SKU-001,SUP-003,10.00,100,2026-10-09,2026-11-08,approved,synthetic
+SCM-004,Tea festive scheme,SKU-009,SUP-005,12.00,10,2026-11-20,2026-12-05,approved,synthetic

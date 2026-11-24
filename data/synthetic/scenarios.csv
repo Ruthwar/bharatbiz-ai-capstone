@@ -1,5 +1,5 @@
 scenario_id,name,trigger,expected
-SCN-001,Baseline day,Use starting operational state,"Feasible plan or explicit infeasibility; enforce stock, supplier and cash constraints"
+SCN-001,Normal day,Use starting operational state,"Feasible plan or explicit infeasibility; enforce stock, supplier and cash constraints"
 SCN-002,Biscuit demand spike,Increase biscuit demand by 60 percent for two simulated days,Recompute stock and orders; show unmet demand and replan
 SCN-003,Supplier delay,Delay one supplier by two days; balance date unknown,Compare alternatives; do not invent a revised date
 SCN-004,Liquidity stress,"Delay a ₹30,000.00 retailer payment by seven days","Protect the ₹50,000.00 minimum buffer or report infeasible"
@@ -7,3 +7,9 @@ SCN-005,Inventory discrepancy,Physical count finds 15 fewer base units for one S
 SCN-006,Retailer complaint,Late delivery complaint with product mention but no order ID,Preserve exact evidence and request clarification for unmatched order
 SCN-007,Competitor report,One uncorroborated promotion observation,"Show as reported/unverified, not as established market fact"
 SCN-008,Combined disruption,"Demand increase, supplier delay and delayed payment together",Replan under hard constraints or explain infeasibility
+SCN-010,Overdue retailer with new order,Retailer with an overdue receivable places a new order,Show exposure and hold for human credit review; no credit decision
+SCN-011,Scheme claim mismatch,Retailer claims a promotion that does not match the approved scheme register,Compare claim with scheme terms; no discount or credit note executed
+SCN-012,Short and damaged delivery,"Received quantity, damage and wrong-item count differ from the purchase order",Show delivery variance and raise a supplier claim for human approval
+SCN-013,Batch recall and quality hold,Supplier issues a quality hold for one batch,Quarantine affected batch and block allocation; human approval only
+SCN-014,Short-dated stock and return window,Batch expires inside the supplier return window,Recommend return or priority dispatch; no stock mutation
+SCN-015,Dispatch under vehicle capacity,Route demand exceeds vehicle capacity,Allocate by priority and promised date; list deferred orders

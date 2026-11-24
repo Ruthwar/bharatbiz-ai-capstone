@@ -10,7 +10,7 @@ class SlotSpec(BaseModel):
     required: list[str]
     optional: list[str] = []
     askable_by: list[str] = []
-    max_rounds: int = 2
+    max_rounds: int = 4
     questions_allowed: bool = True
 
 
@@ -173,6 +173,12 @@ QUESTIONS: dict[tuple[str, str], dict[str, str]] = {
     },
 }
 
+OPTION_PROMPTS = {
+    "English": "Reply with one option: ",
+    "Hinglish": "Ek option choose karke reply karein: ",
+    "Hindi": "एक विकल्प चुनकर उत्तर दें: ",
+}
+
 
 def _has_slot(extraction: Extraction, slot: str) -> bool:
     if slot == "product":
@@ -197,6 +203,7 @@ def next_question(
     language: str,
     available: set[str] | None = None,
     additional_missing: list[str] | None = None,
+    product_options: list[str] | None = None,
 ) -> str | None:
     """One template question for the highest-priority missing slot, or None."""
     spec = SLOT_SPECS.get(intent)
@@ -210,5 +217,9 @@ def next_question(
             continue
         template = QUESTIONS.get((intent, slot))
         if template:
-            return template.get(language) or template["English"]
+            question = template.get(language) or template["English"]
+            if slot == "product" and product_options:
+                option_prompt = OPTION_PROMPTS.get(language, OPTION_PROMPTS["English"])
+                return question + "\n" + option_prompt + " | ".join(product_options)
+            return question
     return None

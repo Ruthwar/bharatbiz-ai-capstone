@@ -1,0 +1,36 @@
+{
+  "scenario_id": "SCN-015",
+  "name": "Dispatch under vehicle capacity",
+  "description": "Tomorrow's cooking-oil demand for route RTE-001 exceeds the van capacity. The system ranks orders and lists what fits and what must be deferred.",
+  "message": {
+    "message_id": "DEMO-SCN-015-001",
+    "source_type": "synthetic",
+    "text": "REP-017 here. Plan tomorrow's dispatch plan for route RTE-001: vehicle capacity is below demand. Tell me what to load first.",
+    "observed_at": "2026-11-23T15:50:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v3-live-20261123",
+    "sender": {
+      "party_type": "sales_rep",
+      "party_id": "REP-017",
+      "channel": "api"
+    }
+  },
+  "target_sku_id": "SKU-003",
+  "subject": {
+    "route_id": "RTE-001"
+  },
+  "unknowns": [
+    "driver_confirmation",
+    "deferred_order_approval"
+  ],
+  "expected": {
+    "review_kind": "dispatch_review",
+    "review_status": "pending_review",
+    "route_id": "RTE-001",
+    "capacity_units": 40,
+    "demand_units": 47,
+    "deferred_orders": 1,
+    "executes_dispatch": false
+  }
+}
