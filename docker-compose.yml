@@ -1,0 +1,48 @@
+services:
+  api:
+    build:
+      context: .
+    image: bharatbiz-api:local
+    ports:
+      - "8011:8011"
+    environment:
+      APP_MODE: mock
+      LLM_PROVIDER: none
+      BHARATBIZ_TRACE_EXPORT: none
+      BHARATBIZ_RATE_LIMIT_PER_MINUTE: "600"
+      BHARATBIZ_CACHE_TTL_SECONDS: "5"
+      # To use the college gateway, set these here or via an env file you keep out of Git:
+      # LLM_PROVIDER: openai
+      # LLM_BASE_URL: https://gateway.example/v1
+      # LLM_MODEL: Qwen3-8B
+      # LLM_API_KEY: set-me-at-runtime
+    volumes:
+      - bharatbiz-runtime:/app/data/runtime
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8011/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  dashboard:
+    image: bharatbiz-api:local
+    depends_on:
+      api:
+        condition: service_healthy
+    command:
+      - streamlit
+      - run
+      - app/dashboard/chat.py
+      - --server.port=8511
+      - --server.address=0.0.0.0
+      - --server.headless=true
+    environment:
+      BHARATBIZ_API_URL: http://api:8011
+    ports:
+      - "8511:8511"
+    restart: unless-stopped
+
+volumes:
+  bharatbiz-runtime:

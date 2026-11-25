@@ -113,7 +113,7 @@ def _cases(get, patch) -> None:
     st.write(selected["summary"])
     st.caption(f"Follow-up: {selected['follow_up']} · orders: {', '.join(selected['order_ids']) or 'none'}")
     with st.form(f"case-update-{selected_id}"):
-        actor = st.text_input("Staff ID", "demo-owner")
+        actor = st.text_input("Staff ID", "ops-owner")
         owner = st.text_input("Owner", selected["owner"] or "")
         next_status = st.selectbox(
             "New status",
@@ -186,7 +186,7 @@ def _drafts(get, post, review_items: list[dict]) -> None:
     if review:
         with st.form(f"draft-review-{selected_id}"):
             final_text = st.text_area("Approved reply text", draft["final_text"] or draft["text"], height=130)
-            reviewer = st.text_input("Reviewer ID", "demo-owner")
+            reviewer = st.text_input("Reviewer ID", "ops-owner")
             note = st.text_input("Review note")
             approve, reject = st.columns(2)
             approved = approve.form_submit_button("Approve reply", type="primary", width="stretch")
@@ -213,7 +213,7 @@ def _drafts(get, post, review_items: list[dict]) -> None:
     if draft["edit_warnings"]:
         st.warning("Edit checks: " + ", ".join(draft["edit_warnings"]))
     if draft["review_status"] == "approved" and not draft["sent_manually_at"]:
-        sent_by = st.text_input("Manual sender ID", "demo-owner", key=f"sender-{selected_id}")
+        sent_by = st.text_input("Manual sender ID", "ops-owner", key=f"sender-{selected_id}")
         if st.button("Mark as manually sent", key=f"mark-sent-{selected_id}"):
             try:
                 post(f"/api/v1/retail/drafts/{selected_id}/mark-sent", {"sent_by": sent_by})

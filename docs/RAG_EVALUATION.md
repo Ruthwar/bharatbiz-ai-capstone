@@ -26,6 +26,8 @@ A high retrieval score with a citation that does not justify the card would fail
 
 Labels were not tuned to the ranking. Where a question is genuinely answered by more than one document — the delay notice requirement appears in both POL-DLY-001 and the supplier terms — the duplicates are recorded as `acceptable` and counted for recall, but not for primary@1.
 
+The corpus has since grown to 33 documents / 203 sections / 104.6 KiB. The numbers in this section are a dated snapshot; run `python scripts/eval_rag.py` for the current values.
+
 ## 3. Results
 
 Measured 2026-11-16 on the expanded corpus:
@@ -121,7 +123,10 @@ Neither is needed for the demo. Both are recorded here so the limitation is a kn
 
 ## 7. Next, if the corpus grows
 
-1. Add a document-level score so a rule spread across sections outranks a one-line mention.
-2. Add embeddings for Hinglish and Hindi message text (`bge-m3` or `multilingual-e5`), keeping BM25 as the exact-term channel.
+Items 1 and 2 were implemented and measured on an additive 480-document corpus on 2026-11-24;
+see `docs/TRACK_B_RAG_EXPERIMENTS.md`. Paragraph-level chunking recovered most of the lost recall,
+section-level hybrid retrieval plus reranking improved on section BM25, and dense-only retrieval
+was weakest. The runtime corpus and BM25 path remain unchanged.
+
 3. Add a retrieval-quality gate per intent: if the top score is below a calibrated floor, show "no policy matched" rather than a weak citation. The current card already distinguishes the two, but the floor is not calibrated.
 4. Have a domain reviewer label 50 real questions. Forty self-written queries prove the pipeline works; they do not prove it covers what a distributor's staff actually asks.

@@ -23,7 +23,7 @@ from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
-TRACE_KINDS = ("generation", "retrieval", "fallback")
+TRACE_KINDS = ("generation", "retrieval", "fallback", "agent", "tool")
 
 
 def _now() -> str:
@@ -173,6 +173,8 @@ class TraceStore:
         generations = [span for span in spans if span["kind"] == "generation"]
         retrieval = [span for span in spans if span["kind"] == "retrieval"]
         fallbacks = [span for span in spans if span["kind"] == "fallback"]
+        agent_spans = [span for span in spans if span["kind"] == "agent"]
+        tool_calls = [span for span in spans if span["kind"] == "tool"]
         errors = [span for span in spans if span["status"] == "error"]
         tokens = sum((span["prompt_tokens"] or 0) + (span["completion_tokens"] or 0) for span in generations)
         latencies = sorted(span["latency_ms"] for span in generations if span["latency_ms"] is not None)
@@ -191,6 +193,8 @@ class TraceStore:
                 "generations": len(generations),
                 "retrieval_calls": len(retrieval),
                 "fallbacks": len(fallbacks),
+                "agent_spans": len(agent_spans),
+                "tool_calls": len(tool_calls),
                 "errors": len(errors),
                 "exported": sum(1 for span in spans if span["exported"]),
             },

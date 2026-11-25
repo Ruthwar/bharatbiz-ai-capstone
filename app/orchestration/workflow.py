@@ -206,7 +206,7 @@ def _process_supplier_delay(
             message,
             event,
             extraction,
-            "Unable to resolve " + ", ".join(missing) + " from the source and synthetic catalogue.",
+            "Unable to resolve " + ", ".join(missing) + " from the source and catalogue.",
         )
 
     supplier_label = next(

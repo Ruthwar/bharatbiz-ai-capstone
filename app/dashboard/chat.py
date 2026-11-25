@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.dashboard.evaluation_view import render_evaluation  # noqa: E402
 from app.dashboard.observability_view import render_observability  # noqa: E402
 from app.dashboard.retail_view import render_retail_desk  # noqa: E402
+from app.dashboard.track_b_view import render_track_b  # noqa: E402
 from app.dashboard.review_view import (  # noqa: E402
     ADVISORY_KINDS,
     render_advisory,
@@ -54,12 +55,27 @@ PAGES = [
     "Retail desk",
     "Operations data",
     "Evaluation",
+    "Track B evidence",
     "LLM observability",
     "Knowledge",
 ]
 
 st.set_page_config(page_title="BharatBiz Operations", layout="wide", initial_sidebar_state="expanded")
 apply_theme()
+
+
+def data_version_label(value: str | None) -> str:
+    return (value or "").removeprefix("synthetic-")
+
+
+def presentation_text(value):
+    if isinstance(value, str):
+        return value.replace("demo date", "decision date")
+    if isinstance(value, list):
+        return [presentation_text(item) for item in value]
+    if isinstance(value, dict):
+        return {key: presentation_text(item) for key, item in value.items()}
+    return value
 
 
 def post(path: str, payload: dict) -> dict:
@@ -70,7 +86,7 @@ def post(path: str, payload: dict) -> dict:
         method="POST",
     )
     with urllib.request.urlopen(request, timeout=45) as response:
-        return json.loads(response.read().decode("utf-8"))
+        return presentation_text(json.loads(response.read().decode("utf-8")))
 
 
 def patch(path: str, payload: dict) -> dict:
@@ -81,12 +97,12 @@ def patch(path: str, payload: dict) -> dict:
         method="PATCH",
     )
     with urllib.request.urlopen(request, timeout=15) as response:
-        return json.loads(response.read().decode("utf-8"))
+        return presentation_text(json.loads(response.read().decode("utf-8")))
 
 
 def get(path: str):
     with urllib.request.urlopen(f"{API_URL}{path}", timeout=15) as response:
-        return json.loads(response.read().decode("utf-8"))
+        return presentation_text(json.loads(response.read().decode("utf-8")))
 
 
 def safe_get(path: str, fallback):
@@ -101,23 +117,23 @@ def go_to(page: str) -> None:
     st.rerun()
 
 
-@st.dialog("Reset demo data?")
-def confirm_demo_reset() -> None:
+@st.dialog("Reset workspace data?")
+def confirm_workspace_reset() -> None:
     st.write(
         "This clears displayed scenario results, inbox chats, unfinished conversations, "
         "the review queue, retailer cases, reply drafts, market observations and model traces."
     )
-    st.caption("The fifteen source fixtures, base business data, knowledge corpus and evaluation results are preserved.")
+    st.caption("The fifteen source scenarios, base business data, knowledge corpus and evaluation results are preserved.")
     cancel_column, reset_column = st.columns(2)
     if cancel_column.button("Cancel", width="stretch"):
         st.rerun()
-    if reset_column.button("Yes, reset demo", type="primary", width="stretch"):
+    if reset_column.button("Yes, reset workspace", type="primary", width="stretch"):
         try:
             post("/api/v1/demo/reset", {})
         except urllib.error.HTTPError as exc:
             st.error(f"API returned {exc.code}: {exc.read().decode('utf-8')}")
         except (urllib.error.URLError, TimeoutError) as exc:
-            st.error(f"Cannot reset the demo through the API at {API_URL}: {exc}")
+            st.error(f"Cannot reset the workspace through the API at {API_URL}: {exc}")
         else:
             st.session_state.clear()
             st.session_state.next_page = "Overview"
@@ -184,7 +200,7 @@ def render_overview(state, review_items: list[dict], stock: list[dict], orders: 
         "Control room",
         "Operations overview",
         "A single view of demand, stock exposure, cash protection and decisions waiting for a person.",
-        f"As of {state.as_of:%d %b %Y} · Synthetic workspace",
+        f"As of {state.as_of:%d %b %Y} · Operations workspace",
     )
     gaps = [row for row in stock if row["Status"] == "Supply gap"]
     high_priority = sum(row["Priority"] == "high" for row in orders)
@@ -197,7 +213,7 @@ def render_overview(state, review_items: list[dict], stock: list[dict], orders: 
     with columns[2]:
         metric_card("Pending review", str(len(review_items)), "Human decision required", "warning" if review_items else "success")
     with columns[3]:
-        metric_card("Cash on hand", money(state.cash_balance_rupees), "Opening simulation balance")
+        metric_card("Cash on hand", money(state.cash_balance_rupees), "Opening balance")
     with columns[4]:
         metric_card("Deployable cash", money(headroom), f"Above {money(state.minimum_cash_buffer_rupees)} buffer", "success")
 
@@ -327,7 +343,7 @@ def _load_inbox_example(example: dict, sender_label: str) -> None:
     message = example["message"]
     st.session_state.inbox_sender = sender_label
     st.session_state.inbox_language = message["language"]
-    st.session_state.inbox_conversation = f"demo-{example['scenario_id'].lower()}"
+    st.session_state.inbox_conversation = f"intake-{example['scenario_id'].lower()}"
     st.session_state.message_draft = message["text"]
     st.session_state.last_result = None
     st.session_state.chat = []
@@ -337,13 +353,13 @@ def render_inbox(parties: list[dict], scenarios: list[dict]) -> None:
     page_header(
         "Channel workspace",
         "Message inbox",
-        "Simulate a supplier or retailer update, inspect the extracted evidence, and send the resulting case to review.",
-        "Demo channel · identity is selected, not authenticated",
+        "Capture a supplier or retailer update, inspect the extracted evidence, and send the resulting case to review.",
+        "Channel identity",
     )
     examples = {row["scenario_id"]: row for row in scenarios if row.get("message")}
     sender_labels = {}
     with st.container(border=True):
-        section_title("Intake controls", "A production channel would derive the sender from the authenticated account.")
+        section_title("Intake controls", "Sender profiles come from the operations directory.")
         sender_column, language_column, conversation_column = st.columns([2, 1, 1.4])
         if parties:
             labels = {
@@ -358,7 +374,7 @@ def render_inbox(parties: list[dict], scenarios: list[dict]) -> None:
                 message = example["message"]
                 key = (message["sender_type"], message["sender_id"])
                 if key not in sender_labels:
-                    party_name = f"{scenario_id} field reporter" if key[1] else "Synthetic planning desk"
+                    party_name = f"{scenario_id} field reporter" if key[1] else "Planning desk"
                     label = f"{party_name} · {key[0]} · {key[1] or 'no reporter ID'}"
                     labels[label] = {
                         "party_name": party_name,
@@ -372,13 +388,13 @@ def render_inbox(parties: list[dict], scenarios: list[dict]) -> None:
             sender_type = sender_column.selectbox("Sender type", ["retailer", "supplier", "sales_rep", "unknown"])
             sender_id = sender_column.text_input("Sender account ID", "SUP-005")
         language = language_column.selectbox("Language", ["English", "Hinglish", "Hindi"], key="inbox_language")
-        conversation_id = conversation_column.text_input("Conversation ID", "demo-conversation-1", key="inbox_conversation")
+        conversation_id = conversation_column.text_input("Conversation ID", "conversation-1", key="inbox_conversation")
 
         if examples:
             st.divider()
             section_title(
-                "Demo examples",
-                "Load an editable intake message, or run the complete fixture to inspect its canonical decision.",
+                "Example messages",
+                "Load an editable intake message, or run the complete scenario to inspect its canonical decision.",
             )
             selected_example_id = st.selectbox(
                 "Example scenario",
@@ -423,12 +439,12 @@ def render_inbox(parties: list[dict], scenarios: list[dict]) -> None:
                     st.session_state.scenario_result_mode = st.session_state.get("recommendation_mode", "deterministic")
                     st.session_state.scenario_selector = selected_example_id
                     go_to("Scenario lab")
-            st.caption("Editable intake processes only the visible message. Run full scenario to include all fixture overlays and assumptions.")
+            st.caption("Editable intake processes only the visible message. Run full scenario to include all scenario overlays and assumptions.")
 
     left, right = st.columns([1.15, 1])
     with left:
         with st.container(border=True):
-            section_title("Sandbox conversation", "Only receipt and completion acknowledgements are automated.")
+            section_title("Intake conversation", "Only receipt and completion acknowledgements are automated.")
             history = st.session_state.setdefault("chat", [])
             for entry in history:
                 with st.chat_message(entry["role"]):
@@ -480,11 +496,11 @@ def render_scenario_lab(scenarios: list[dict]) -> None:
     page_header(
         "Selectable decision modes",
         "Scenario lab",
-        "Run every capstone scenario through the same extraction, planning, verification and human-review contracts.",
-        f"{len(scenarios)} explicit fixtures · base business data is never mutated",
+        "Run every operating scenario through the same extraction, planning, verification and human-review contracts.",
+        f"{len(scenarios)} scenario definitions · base business data is never mutated",
     )
     if not scenarios:
-        empty_state("Scenario catalogue unavailable", "Start the API to load and run the scenario fixtures.")
+        empty_state("Scenario catalogue unavailable", "Start the API to load and run the scenario catalogue.")
         return
     by_id = {row["scenario_id"]: row for row in scenarios}
     selected_id = st.selectbox(
@@ -514,7 +530,7 @@ def render_scenario_lab(scenarios: list[dict]) -> None:
 
     result = st.session_state.get("scenario_result")
     if not result:
-        empty_state("No scenario run yet", "Select a fixture and run it to inspect the complete decision trace.")
+        empty_state("No scenario run yet", "Select a scenario and run it to inspect the complete decision trace.")
         return
     if st.session_state.get("scenario_result_id") != selected_id:
         st.info("The displayed result is from the previously selected scenario. Run this scenario to replace it.")
@@ -534,7 +550,7 @@ def render_scenario_lab(scenarios: list[dict]) -> None:
     )
     st.caption(
         f"Status: {str(recommendation.get('review_status', 'unknown')).replace('_', ' ')} · "
-        f"Event {event.get('event_id')} · Data version {event.get('state_version')} · "
+        f"Event {event.get('event_id')} · Data version {data_version_label(event.get('state_version'))} · "
         f"Facts read with {(context or {}).get('extraction_label', 'deterministic extraction')}"
     )
     summary_text = (context or {}).get("operator_summary") or recommendation.get("summary", "")
@@ -567,7 +583,7 @@ def render_draft_review_actions(item: dict) -> None:
         )
         with st.form(f"decision-draft-{item['event_id']}"):
             final_text = st.text_area("Reply text", draft["final_text"] or draft["text"], height=125)
-            reviewer = st.text_input("Reviewer ID", "demo-owner")
+            reviewer = st.text_input("Reviewer ID", "ops-owner")
             note = st.text_input("Review note")
             approve_column, reject_column = st.columns(2)
             approved = approve_column.form_submit_button("Approve reply", type="primary", width="stretch")
@@ -603,9 +619,9 @@ def render_review_actions(item: dict, context: dict | None) -> None:
     with st.container(border=True):
         section_title(
             "Reviewer decision" if planned else "Triage decision",
-            "Approval changes the demo ledger only." if planned else "Resolve or dismiss this unplanned case in the demo ledger.",
+            "Approval changes the review ledger only." if planned else "Resolve or dismiss this unplanned case in the review ledger.",
         )
-        reviewer = st.text_input("Reviewer ID", "demo-owner", key=f"reviewer-{selected_id}")
+        reviewer = st.text_input("Reviewer ID", "ops-owner", key=f"reviewer-{selected_id}")
         approve_column, reject_column, note_column = st.columns([1, 1, 2.5])
         if approve_column.button(
             "Approve plan" if operational else "Mark reviewed",
@@ -615,7 +631,7 @@ def render_review_actions(item: dict, context: dict | None) -> None:
             width="stretch",
         ):
             post(f"/api/v1/review/{selected_id}", {"decision": "approve", "reviewer": reviewer})
-            st.toast("Case updated in the demo ledger.")
+            st.toast("Case updated in the review ledger.")
             st.rerun()
         if reject_column.button(
             "Reject plan" if operational else "Dismiss case",
@@ -623,7 +639,7 @@ def render_review_actions(item: dict, context: dict | None) -> None:
             width="stretch",
         ):
             post(f"/api/v1/review/{selected_id}", {"decision": "reject", "reviewer": reviewer})
-            st.toast("Case dismissed in the demo ledger.")
+            st.toast("Case dismissed in the review ledger.")
             st.rerun()
         note_column.caption("No purchase order, payment, stock update or outbound message is executed.")
 
@@ -671,7 +687,7 @@ def render_decision_desk(review_items: list[dict]) -> None:
             unsafe_allow_html=True,
         )
         st.caption(
-            f"Received {item['received_at']} · data version {item['state_version']} · "
+            f"Received {item['received_at']} · data version {data_version_label(item['state_version'])} · "
             f"decision {((context or {}).get('decision_mode_label') or item.get('decision_mode') or 'deterministic').lower()} · "
             f"facts {(context or {}).get('extraction_label') or item['mode']}"
         )
@@ -762,10 +778,10 @@ def render_decision_desk(review_items: list[dict]) -> None:
 
 def render_operations(state, stock: list[dict], orders: list[dict]) -> None:
     page_header(
-        "Synthetic ledger",
+        "Business ledger",
         "Operations data",
         "Inspect the exact records used by the planner. Product, retailer and supplier IDs remain stable join keys.",
-        f"State {state.state_version}",
+        f"State {data_version_label(state.state_version)}",
     )
     inventory_tab, orders_tab, suppliers_tab, retailers_tab, catalogue_tab, cash_tab = st.tabs(
         ["Inventory", "Open orders", "Suppliers", "Retailers", "Catalogue", "Cash ledger"]
@@ -774,7 +790,7 @@ def render_operations(state, stock: list[dict], orders: list[dict]) -> None:
         section_title("Inventory position", "Available, incoming and reorder thresholds by SKU.")
         st.dataframe(stock, width="stretch", hide_index=True)
     with orders_tab:
-        section_title("Open order book", f"{len(orders)} order lines in the simulation state.")
+        section_title("Open order book", f"{len(orders)} order lines in the workspace.")
         st.dataframe(orders, width="stretch", hide_index=True)
     with suppliers_tab:
         section_title("Supplier directory", "Lead times and payment terms are context, not supplier credit in the cash projection.")
@@ -796,7 +812,7 @@ def render_operations(state, stock: list[dict], orders: list[dict]) -> None:
             hide_index=True,
         )
     with retailers_tab:
-        section_title("Retailer directory", "Fictional trade names and localities; not verified real businesses.")
+        section_title("Retailer directory", "Trade names and localities from the operations directory.")
         st.dataframe(
             [
                 {
@@ -830,7 +846,7 @@ def render_operations(state, stock: list[dict], orders: list[dict]) -> None:
             hide_index=True,
         )
     with cash_tab:
-        section_title("Cash ledger", "Synthetic movements; procurement plans treat cost as immediate outflow.")
+        section_title("Cash ledger", "Recorded movements; procurement plans treat cost as immediate outflow.")
         with (PROJECT_ROOT / "data" / "synthetic" / "cash_ledger.csv").open(encoding="utf-8-sig", newline="") as handle:
             ledger_rows = list(csv.DictReader(handle))
         st.dataframe(
@@ -882,7 +898,7 @@ def render_knowledge() -> None:
                     "Policy": document.document_id,
                     "Title": document.title,
                     "Effective": document.effective_from,
-                    "State on demo date": "In force" if document in in_force else "Pending",
+                    "State on decision date": "In force" if document in in_force else "Pending",
                 }
                 for document in policies
             ],
@@ -942,7 +958,7 @@ def render_knowledge() -> None:
 try:
     state = load_business_state()
 except StateLoadError as exc:
-    st.error(f"Cannot load the synthetic business state: {exc}")
+    st.error(f"Cannot load the business state: {exc}")
     st.stop()
 
 inference = safe_get("/api/v1/status", None)
@@ -969,7 +985,7 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
     page = st.radio("Workspace", PAGES, key="navigation", label_visibility="collapsed")
-    st.markdown('<div class="bb-side-label">Simulation state</div>', unsafe_allow_html=True)
+    st.markdown('<div class="bb-side-label">Workspace state</div>', unsafe_allow_html=True)
     if inference is None:
         inference_text = "<strong>API offline</strong><br>Business data remains available"
         inference_tone = "#f3b4b4"
@@ -981,7 +997,7 @@ with st.sidebar:
         inference_tone = "#a7e3d5"
     st.markdown(
         f"<div class='bb-side-status'><span style='color:{inference_tone}'>{inference_text}</span><br><br>"
-        f"<strong>As of</strong> {state.as_of:%d %b %Y}<br><span class='bb-code'>{escape(state.state_version)}</span></div>",
+        f"<strong>As of</strong> {state.as_of:%d %b %Y}<br><span class='bb-code'>{escape(data_version_label(state.state_version))}</span></div>",
         unsafe_allow_html=True,
     )
     st.selectbox(
@@ -996,11 +1012,11 @@ with st.sidebar:
             st.caption(f"Decision model: {escape(inference.get('decision_model') or 'configured model')}")
         else:
             st.warning("The policy-grounded LLM is not configured. Configure the existing LLM provider before running it.")
-    if st.button("Reset demo", disabled=inference is None, width="stretch"):
-        confirm_demo_reset()
+    if st.button("Reset workspace", disabled=inference is None, width="stretch"):
+        confirm_workspace_reset()
     st.caption("Start fresh: clear scenario runs, chats, reviews, retailer history and model traces.")
     st.divider()
-    st.caption("Academic synthetic simulation. Recommendations are advisory and require human approval.")
+    st.caption("Recommendations are advisory and require human approval.")
     st.caption("No purchases · payments · stock mutations · outbound messages")
 
 if page == "Overview":
@@ -1016,7 +1032,9 @@ elif page == "Retail desk":
 elif page == "Operations data":
     render_operations(state, stock_rows, open_order_rows)
 elif page == "Evaluation":
-    render_evaluation(inference, get, post)
+    render_evaluation(inference, get, post, go_to)
+elif page == "Track B evidence":
+    render_track_b(get, post, inference, API_URL)
 elif page == "LLM observability":
     render_observability(get)
 else:

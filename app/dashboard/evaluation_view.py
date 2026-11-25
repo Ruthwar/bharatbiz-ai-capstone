@@ -27,7 +27,7 @@ def _elapsed(job: dict) -> str:
     return f"{max(0, (end - begin).total_seconds()):.1f} s"
 
 
-def _start_evaluation(kind: str, post) -> None:
+def start_evaluation(kind: str, post) -> None:
     try:
         job = post(f"/api/v1/evaluations/{kind}/run", {})
     except urllib.error.HTTPError as exc:
@@ -40,7 +40,7 @@ def _start_evaluation(kind: str, post) -> None:
     st.session_state.active_evaluation_kind = kind
 
 
-def _render_live_evaluation(job_id: str, get) -> None:
+def render_live_evaluation(job_id: str, get) -> None:
     placeholder = st.empty()
     while True:
         try:
@@ -56,7 +56,7 @@ def _render_live_evaluation(job_id: str, get) -> None:
             with st.container(border=True):
                 section_title(
                     f"Running {job['kind']} evaluation",
-                    "Each item is executed and scored; progress below comes from the running job, not a simulated timer.",
+                    "Each item is executed and scored; progress below comes from the running job.",
                 )
                 st.progress(current / total if total else 0.0, text=f"{current}/{total or '—'} items completed")
                 st.write(f"**{latest.get('title', 'Preparing evaluation')}**")
@@ -190,7 +190,7 @@ def _render_extraction_results(job: dict) -> None:
     rows = result["rows"]
     llm = summary["variants"]["llm"]
     st.caption(
-        f"Completed {job['completed_at']} · {summary['examples']} held-out synthetic messages · "
+        f"Completed {job['completed_at']} · {summary['examples']} held-out evaluation messages · "
         f"{summary['llm_model']} · prompt {summary['prompt_version']}"
     )
     columns = st.columns(5)
@@ -276,22 +276,34 @@ def _render_metric_guide() -> None:
         - **Rules fallback:** counts model failures replaced by rules; these runs remain visible in the results.
         """
     )
-    st.info("The 12 extraction messages are evaluation-only. They are never used to tune prompts, rules or RAG queries. Results are synthetic-set measurements, not proof of performance on real business messages.")
+    st.info("The 12 extraction messages are held out from prompt design, rules and RAG queries. Results are measured on that held-out evaluation set.")
 
 
-def render_evaluation(inference: dict | None, get, post) -> None:
+def render_evaluation(inference: dict | None, get, post, go_to=None) -> None:
     page_header(
         "Evidence and model quality",
         "Evaluation",
         "Run the frozen RAG and held-out extraction evaluations, watch each check execute, and inspect the evidence behind every result.",
         "Read-only evaluation · no operational decisions or state mutations",
     )
+    if go_to is not None:
+        with st.container(border=True):
+            left, right = st.columns([3, 1])
+            left.write(
+                "**Track B evidence workspace:** the 80-case gold set, retrieval upgrades, prompting comparison, "
+                "bounded agent runtime and safety controls."
+            )
+            with right:
+                if st.button("Open Track B evidence", width="stretch"):
+                    go_to("Track B evidence")
     try:
         latest = get("/api/v1/evaluations/latest")
     except (urllib.error.URLError, TimeoutError, ValueError):
-        latest = {"rag": None, "extraction": None}
-    for kind in ("rag", "extraction"):
-        st.session_state.setdefault(f"evaluation_{kind}", latest.get(kind))
+        latest = None
+    if latest is not None:
+        for kind in ("rag", "extraction"):
+            job = latest.get(kind)
+            st.session_state[f"evaluation_{kind}"] = job if job and job.get("result") is not None else None
     active_job = st.session_state.get("active_evaluation_job")
     left, right = st.columns(2)
     with left:
@@ -304,7 +316,7 @@ def render_evaluation(inference: dict | None, get, post) -> None:
                 key="run-rag-evaluation",
                 type="primary",
                 disabled=bool(active_job),
-                on_click=_start_evaluation,
+                on_click=start_evaluation,
                 args=("rag", post),
                 width="stretch",
             )
@@ -313,7 +325,7 @@ def render_evaluation(inference: dict | None, get, post) -> None:
             section_title("LLM extraction", "12 held-out messages · rules versus validated LLM pipeline")
             st.write("Compares intent and entity extraction, exact evidence, validation failures, fallbacks and response time.")
             if inference and inference.get("llm_enabled"):
-                st.caption(f"Configured model: {inference['model']} · synthetic evaluation messages only")
+                st.caption(f"Configured model: {inference['model']} · held-out evaluation messages only")
             else:
                 st.caption("Enable the configured LLM to run the comparison. RAG evaluation remains available.")
             st.button(
@@ -321,12 +333,12 @@ def render_evaluation(inference: dict | None, get, post) -> None:
                 key="run-llm-evaluation",
                 type="primary",
                 disabled=bool(active_job) or not (inference and inference.get("llm_enabled")),
-                on_click=_start_evaluation,
+                on_click=start_evaluation,
                 args=("extraction", post),
                 width="stretch",
             )
     if active_job:
-        _render_live_evaluation(active_job, get)
+        render_live_evaluation(active_job, get)
     rag_tab, extraction_tab, guide_tab = st.tabs(["RAG results", "Extraction results", "Metric guide"])
     with rag_tab:
         job = st.session_state.get("evaluation_rag")

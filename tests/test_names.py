@@ -82,6 +82,22 @@ def test_model_name_fact_is_converted_to_catalogue_id(state):
     assert extraction.fact("supplier_name") is None
 
 
+def test_unknown_supplier_id_is_rejected(state):
+    message = _message(
+        "SUP-999 reports a two-day delay for Cooking oil 1 L pouch.",
+        state.state_version,
+    )
+    extraction = Extraction(
+        intents=[IntentMatch(intent="supplier_delay", confidence=0.9, evidence_span="delay")],
+        facts=[EvidenceFact(field="supplier_id", value="SUP-999", evidence_span="SUP-999")],
+    )
+
+    violations = validate_extraction(extraction, message, state)
+
+    assert violations == ["supplier_not_in_catalogue:SUP-999"]
+    assert extraction.fact("supplier_id") is None
+
+
 def test_unknown_supplier_name_is_not_mapped_or_planned(state):
     message = _message(
         "Gupta Traders reports a two-day delay for Cooking oil 1 L pouch.",

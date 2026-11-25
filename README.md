@@ -59,7 +59,7 @@ uvicorn app.main:app --reload
 streamlit run app\dashboard\chat.py
 ```
 
-Open **Scenario lab** to run any fixture and inspect alternatives, exclusions, counterfactuals, evidence and unknowns. **Decision desk** handles operational, complaint and market-signal reviews. **Retail desk** adds priority fulfilment analysis, durable cases, reply drafts, retailer history and market observations. Approval changes only demo/review state; no purchase, payment, stock update, assortment change or substantive outbound message is executed.
+Open **Scenario lab** to run any fixture and inspect alternatives, exclusions, counterfactuals, evidence and unknowns. **Decision desk** handles operational, complaint and market-signal reviews. **Retail desk** adds priority fulfilment analysis, durable cases, reply drafts, retailer history and market observations. Approval changes only review state; no purchase, payment, stock update, assortment change or substantive outbound message is executed.
 
 Install test dependencies and run the regression suite:
 
@@ -81,13 +81,41 @@ streamlit run app\dashboard\chat.py
 
 The chat page has an intake tab and a review queue. Selecting a sender in the UI simulates channel identity; a real channel derives it from the authenticated account. Receipt and completion acknowledgements are the only automated outbound text. No action executes without human approval.
 
-**Demo examples** in Intake controls cover all fifteen fixtures. **Load editable example** fills the sender, language, conversation and message without submitting it, so the normal intake and clarification flow can be demonstrated. **Run full scenario** applies every fixture overlay and opens the canonical decision in Scenario lab without adding it to the review queue. Plain intake processes only the visible message; it does not reproduce scenario-only demand, cash, delay or stock overlays.
+**Intake examples** in Intake controls cover all fifteen fixtures. **Load editable example** fills the sender, language, conversation and message without submitting it, so the normal intake and clarification flow can be exercised. **Run full scenario** applies every fixture overlay and opens the canonical decision in Scenario lab without adding it to the review queue. Plain intake processes only the visible message; it does not reproduce scenario-only demand, cash, delay or stock overlays.
 
 Model extraction is optional. With `LLM_PROVIDER=none` (the default) the deterministic rules extractor is used. To enable a provider, copy `.env.example` to `.env` (the app loads it automatically) and set `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, and `LLM_CA_BUNDLE` if the endpoint uses a private CA. Verify the connection with `python scripts/check_llm.py`. Never commit `.env`; extraction output is validated against the schema, exact evidence spans and the product catalogue, and falls back to rules on failure.
 
 ## Model observability
 
 **LLM observability** in the dashboard shows a local trace store at `data/runtime/traces.sqlite3` (override with `BHARATBIZ_TRACE_DB`). A scenario run, inbound message or evaluation job opens one trace; every model generation, retrieval call and rules fallback inside it becomes a span with latency, gateway-reported tokens, status and the ids the application used. `GET /api/v1/observability` returns the summary and runs, and `GET /api/v1/observability/traces/{trace_id}` returns one run's spans. Prompts and message bodies are not stored, and cost is not estimated unless `BHARATBIZ_TRACE_COST_PER_1K_TOKENS` is set. Export to Langfuse is opt-in and off by default (`BHARATBIZ_TRACE_EXPORT=langfuse` plus `LANGFUSE_HOST`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`); the ingestion hook has not been verified against a live instance. Deterministic rules extraction with no persisted review makes no model or retrieval call, so it records no span.
+
+## Bounded agent runtime (Track B)
+
+`app/agent_runtime/` adds an explicit planner → executor → critic loop over seven read-only tools (`policy_search`, `policy_metadata`, `inventory_position`, `open_orders`, `supplier_options`, `cash_position`, `retailer_profile`). It is capped at 10 tool calls, 12,000 estimated tokens and 5 seconds per query, retries at most once for a retrieval miss or transient tool failure, and records every step, finding and budget use. It never approves, orders, pays, prices, allocates stock or messages a party.
+
+```powershell
+curl -X POST http://127.0.0.1:8011/api/v1/agent/review -H "Content-Type: application/json" -d "{\"question\":\"The cooking oil supplier is two days late; what can we commit?\",\"intent\":\"supplier_delay\",\"sku_id\":\"SKU-003\",\"supplier_id\":\"SUP-005\",\"delay_days\":2,\"conversation_id\":\"conversation-1\"}"
+python scripts/agent_review.py --intent supplier_delay --sku-id SKU-003 --supplier-id SUP-005 --delay-days 2
+```
+
+`GET /api/v1/agent/tools` publishes the allow-list, `POST /api/v1/agent/plan/validate` checks a supplied plan without running it, and `GET /api/v1/agent/sessions/{conversation_id}` returns the persisted turns (SQLite at `data/runtime/agent_sessions.sqlite3`, override with `BHARATBIZ_AGENT_DB`). Malformed plans fall back to the deterministic plan and are labelled. Design, failure taxonomy and a measured example are in `docs/TRACK_B_AGENT_RUNTIME.md`.
+
+## Production and safety controls
+
+`app/safety/` adds a bounded read-only response cache (5 s TTL, cleared by every write), a per-client token-bucket rate limit (600 requests/min, HTTP 429 with `Retry-After`), PII masking before any external model request, and advisory prompt-injection signals returned with each inbound result. None of these can approve, execute or alter a plan; the review gate is unchanged. `GET /api/v1/safety/controls` reports the active settings and cache statistics without returning secrets. Measured detail is in `docs/TRACK_B_SAFETY.md`.
+
+```powershell
+docker compose up --build
+# API http://127.0.0.1:8011 · dashboard http://127.0.0.1:8511
+```
+
+The image pins `python:3.12.10-slim`, runs as a non-root user, copies only the paths it needs and contains no `.env` or credentials. Docker is not installed in this development environment, so the image has not been built here; static tests check the definitions.
+
+## Measured Track B evaluation
+
+On 2026-11-24 the frozen 80-case Track B gold set passed **80/80** in deterministic mode (across recorded runs: latency p50 184–399 ms, p95 283–625 ms, no exceptions), and the full suite reached **277 passed**. The frozen 17-task agent evaluation completed **17/17** tasks with 4.47 average tool calls, 1,060 estimated tokens per task, p50 250–422 ms and p95 297–500 ms across recorded runs, and zero failure labels. A corpus injection audit scanned 203 sections and flagged 6 policy/SOP passages as advisory signals; no flag changes routing, approval or a plan. The held-out prompting comparison (12 examples, Qwen/Qwen3-8B) measured rules, zero-shot, few-shot, zero-shot repair and few-shot repair with gateway-reported tokens; few-shot raised stated-entity accuracy from 34.8% to 56.5% and strict exact match from 0/12 to 4/12 at 40% more tokens, with validation passing on all 12 examples. Zero-shot repair recovered no validation failure. Cost is left unpriced because the gateway reports no tariff; set `BHARATBIZ_TRACE_COST_PER_1K_TOKENS` for an explicitly illustrative figure.
+
+Full results, failure labels and limitations are in `docs/TRACK_B_EVALUATION.md`; the timed walkthrough is in `docs/PRESENTATION_RUNBOOK.md` with the word-for-word script in `docs/PRESENTATION_SCRIPT_15MIN.md`.
 
 ## Retail operations
 
@@ -106,22 +134,26 @@ Use `python scripts/reset_demo.py` to clear the review ledger, retail runtime st
 - `app/schemas/` shared contracts
 - `app/agents/` specialist analysis modules
 - `app/extraction/` extraction interface: rules and LLM adapters plus pre-plan validation gates
-- `app/channels/` channel adapters (demo chat; WhatsApp would normalise into the same contract)
+- `app/channels/` channel adapters (intake chat; WhatsApp would normalise into the same contract)
 - `app/orchestration/` LangGraph inbound graph (dedup, intake, slot gate, review queue), decision graph (understand, plan, verify, finalize), taxonomy, slot specs and intent router
 - `app/scenarios/` fixture registry and validation, immutable operational overlays, complaint/market handlers and shared execution service
 - `app/optimization/` deterministic allocation, candidate ranking and visible exclusion reasons
 - `app/verification/` independent reconstruction and plan checks
+- `app/agent_runtime/` bounded planner → executor → critic loop over seven read-only tools, with step/token/time budgets, session context and failure labels
+- `app/safety/` read-only response cache, per-client rate limit, PII masking and prompt-injection signals
 - `app/store/` SQLite ledger for dedup, intakes and reviews, plus atomic durable retail cases, drafts, interactions and observations; reset with `python scripts/reset_demo.py`
 - `app/rag/` corpus loader and SQLite FTS5 citation retriever over the approved reference documents
 - `app/observability/` local SQLite trace store, API summary, and optional Langfuse exporter
-- `app/evaluation/` frozen RAG and held-out extraction evaluation jobs
+- `app/evaluation/` frozen Track B gold set, RAG, held-out extraction, prompting and agent evaluation jobs
 - `app/dashboard/` Streamlit operations console with overview, intake, scenario lab, decision desk, retail desk, operations data, evaluation, LLM observability and knowledge search
 - `data/synthetic/` generated synthetic CSV/JSONL and data dictionary
 - `data/knowledge_docs/` 33 approved reference documents (30 synthetic policies, SOPs, supplier terms and case notes, 3 cited regulatory extracts), plus `manifest.json`
+- `data/knowledge_docs_track_b/` additive Track B corpus; base corpus stays unchanged for comparability
 - `data/eval/` golden retrieval queries, held-out extraction examples and evaluation labels kept separate from tuning data
 - `data/pilot_deidentified/` reserved for authorized, de-identified pilot samples; empty by default
 - `data/labels/` annotation guide and evaluation labels
 - `docs/` kickoff, team ownership and individual role briefs
+- `Dockerfile`, `docker-compose.yml` non-root API and dashboard images; `.dockerignore` keeps secrets and runtime data out
 
 ## Data and provenance
 

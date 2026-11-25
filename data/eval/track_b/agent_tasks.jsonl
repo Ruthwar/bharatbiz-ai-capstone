@@ -1,0 +1,17 @@
+{"task_id":"AGT-001","intent":"baseline","question":"What is the standing reorder position for Cooking oil 1 L pouch?","sku_id":"SKU-003","expected_documents":["POL-DEC-008"]}
+{"task_id":"AGT-002","intent":"demand_spike","question":"Biscuits small carton demand is expected to rise by 60 percent next week.","sku_id":"SKU-006","expected_documents":["POL-DEM-007"]}
+{"task_id":"AGT-003","intent":"supplier_delay","question":"Sri Venkateswara reports a two-day delay on Cooking oil 1 L pouch. What can we commit?","sku_id":"SKU-003","supplier_id":"SUP-005","delay_days":2,"expected_documents":["POL-DLY-001"]}
+{"task_id":"AGT-004","intent":"limited_cash","question":"We must pay 250000 rupees this week. What procurement can we still afford?","sku_id":"SKU-003","outflow_rupees":"250000","expected_documents":["POL-CSH-002"]}
+{"task_id":"AGT-005","intent":"stock_discrepancy","question":"The Biscuits small carton stock count does not match the system record.","sku_id":"SKU-006","expected_documents":["POL-STK-007"]}
+{"task_id":"AGT-006","intent":"dispatch_planning","question":"Plan tomorrow's dispatch for route RTE-001 with a 40-unit vehicle.","sku_id":"SKU-003","expected_documents":["POL-SVC-009"]}
+{"task_id":"AGT-007","intent":"delivery_complaint","question":"The retailer says the Tea 1 kg delivery did not arrive on time.","retailer_id":"RET-016","expected_documents":["POL-RCM-007"]}
+{"task_id":"AGT-008","intent":"damaged_item","question":"Two cartons arrived crushed at the retailer.","sku_id":"SKU-003","retailer_id":"RET-003","expected_documents":["POL-RCM-007"]}
+{"task_id":"AGT-009","intent":"missing_item","question":"One case was missing from the retailer delivery.","sku_id":"SKU-003","retailer_id":"RET-004","expected_documents":["POL-RCM-007"]}
+{"task_id":"AGT-010","intent":"product_request","question":"The retailer wants us to list a new 500 g pack.","sku_id":"SKU-006","retailer_id":"RET-005","expected_documents":["POL-MSC-007"]}
+{"task_id":"AGT-011","intent":"credit_check","question":"Check the credit exposure for this retailer before a new order.","sku_id":"SKU-009","retailer_id":"RET-016","expected_documents":["POL-RCM-007"]}
+{"task_id":"AGT-012","intent":"scheme_claim","question":"The retailer claims a scheme reimbursement that looks mismatched.","sku_id":"SKU-003","retailer_id":"RET-002","expected_documents":["POL-PRC-005"]}
+{"task_id":"AGT-013","intent":"delivery_discrepancy","question":"The delivery was short and one case was damaged.","sku_id":"SKU-003","retailer_id":"RET-003","expected_documents":["POL-RCM-007"]}
+{"task_id":"AGT-014","intent":"batch_recall","question":"Recall RCL-001 covers batch BATCH-004 on this SKU. Quarantine it.","sku_id":"SKU-005","expected_documents":["POL-STK-007"]}
+{"task_id":"AGT-015","intent":"short_dated_stock","question":"The stock is short dated and the return window is closing.","sku_id":"SKU-009","expected_documents":["POL-STK-007"]}
+{"task_id":"AGT-016","intent":"competitor_observation","question":"A rival offer for Biscuits small carton appeared at the retailer.","sku_id":"SKU-006","expected_documents":["POL-MSC-007"]}
+{"task_id":"AGT-017","intent":"combined_disruption","question":"The Cooking oil supplier is delayed two days, demand is up, and stock is short.","sku_id":"SKU-003","supplier_id":"SUP-002","delay_days":2,"expected_documents":["POL-DLY-001","POL-DEM-007"]}

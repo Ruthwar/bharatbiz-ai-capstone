@@ -122,6 +122,12 @@ def resolve_business_references(extraction: Extraction, text: str, state: Busine
                 extraction.facts.remove(reference)
                 violations.append(f"{label}_not_in_catalogue:{unresolved}")
 
+        reference = extraction.fact(id_field)
+        if reference is not None and reference.value not in {row[id_field] for row in rows}:
+            unresolved = reference.value
+            extraction.facts.remove(reference)
+            violations.append(f"{label}_not_in_catalogue:{unresolved}")
+
         if extraction.fact(id_field) is None:
             found = find_named_row(text, rows, name_field)
             if found:

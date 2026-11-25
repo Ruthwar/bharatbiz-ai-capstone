@@ -495,6 +495,28 @@ def test_review_deterministic_never_calls_the_model(monkeypatch, scenario_id):
     assert result["decision"]["status"] == "recommended"
 
 
+def test_credit_without_text_reference_uses_the_sending_retailer():
+    base = get_scenario("SCN-001").message
+    message = base.model_copy(
+        update={
+            "message_id": "credit-no-reference",
+            "text": "Please check our credit limit before confirming a new order for 30 units of Tea 1 kg.",
+            "conversation_id": "credit-no-reference",
+            "sender": base.sender.model_copy(update={"party_type": "retailer", "party_id": "RET-001"}),
+        }
+    )
+
+    result = process_message(message)
+
+    assert result["routed_action"] == "credit_check_planning"
+    rows = _review_sections(result)["Credit position"]["rows"]
+    assert {"Item": "Retailer", "Value": "RET-001"} in rows
+    assert {"Item": "Overdue receivables", "Value": "₹0.00"} in rows
+    assert "no overdue receivables" in result["advisory_context"]["operator_summary"]
+    assert result["recommendation"]["review_status"] == "pending_review"
+    assert result["recommendation"]["human_approval_required"] is True
+
+
 def test_credit_policy_mode_confirms_the_supplied_outcome(monkeypatch):
     calls = {}
 
