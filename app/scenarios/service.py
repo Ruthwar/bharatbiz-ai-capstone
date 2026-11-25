@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from app.extraction.base import Extractor
 from app.observability import trace_scope
 from app.orchestration.inbound import process_inbound
 from app.orchestration.workflow import process_message
@@ -52,6 +53,7 @@ def run_scenario(
     persist: bool = False,
     ledger: InboundLedger | None = None,
     decision_mode: str = "deterministic",
+    extractor: Extractor | None = None,
 ) -> dict:
     fixture = get_scenario(scenario_id)
     if fixture.message is None:
@@ -61,7 +63,11 @@ def run_scenario(
     with trace_scope(f"scenario:{scenario_id}", scenario_id=scenario_id, source="scenario"):
         if not persist:
             return process_message(
-                fixture.message, data_dir=data_dir, scenario=fixture, decision_mode=decision_mode
+                fixture.message,
+                data_dir=data_dir,
+                scenario=fixture,
+                decision_mode=decision_mode,
+                extractor=extractor,
             )
 
         inbound = process_inbound(
@@ -70,6 +76,7 @@ def run_scenario(
             data_dir=data_dir,
             scenario=fixture,
             decision_mode=decision_mode,
+            extractor=extractor,
         )
     result = inbound.get("result")
     if result is None:

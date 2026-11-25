@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 from app.observability import record_retrieval
-from app.rag.corpus import DEFAULT_CORPUS_DIR, Document, load_documents
+from app.rag.corpus import DEFAULT_CORPUS_DIR, Document, corpus_files, load_documents
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_INDEX_PATH = PROJECT_ROOT / "data" / "runtime" / "rag.sqlite3"
@@ -83,20 +83,34 @@ def best_quote(text: str, tokens: Sequence[str], limit: int = 320) -> str:
     return best
 
 
-def _fingerprint(corpus_dir: Path) -> str:
+def _fingerprint(paths: Sequence[Path]) -> str:
+    """Hash file content, not timestamps, so copied or re-checked-out corpora reuse the index."""
     digest = hashlib.sha256()
-    for path in sorted(corpus_dir.glob("*.md")):
-        stat = path.stat()
-        digest.update(f"{path.name}:{stat.st_size}:{stat.st_mtime_ns}\n".encode())
+    for path in paths:
+        digest.update(f"{path.name}:".encode())
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+        digest.update(b"\n")
     return digest.hexdigest()
+
+
+def corpus_fingerprint(corpus_dir: Path | None = None, extra_roots: Iterable[Path] | None = None) -> str:
+    """Stable content hash for a base corpus plus optional additive roots."""
+    base = Path(corpus_dir) if corpus_dir else DEFAULT_CORPUS_DIR
+    return _fingerprint(corpus_files(base, extra_roots))
 
 
 class RagIndex:
     """One FTS5 index over the Markdown corpus, rebuilt when the corpus changes."""
 
-    def __init__(self, index_path: str | Path = DEFAULT_INDEX_PATH, corpus_dir: Path | None = None):
+    def __init__(
+        self,
+        index_path: str | Path = DEFAULT_INDEX_PATH,
+        corpus_dir: Path | None = None,
+        extra_corpus_dirs: Iterable[Path] | None = None,
+    ):
         self.index_path = str(index_path)
         self.corpus_dir = Path(corpus_dir) if corpus_dir else DEFAULT_CORPUS_DIR
+        self.extra_corpus_dirs = [Path(root) for root in extra_corpus_dirs or ()]
         self._fingerprint: str | None = None
         self._memory: sqlite3.Connection | None = None
 
@@ -114,7 +128,7 @@ class RagIndex:
             conn.close()
 
     def ensure(self) -> None:
-        fingerprint = _fingerprint(self.corpus_dir)
+        fingerprint = corpus_fingerprint(self.corpus_dir, self.extra_corpus_dirs)
         if fingerprint == self._fingerprint:
             return
         conn = self._connect()
@@ -134,7 +148,7 @@ class RagIndex:
         return row[0] if row else None
 
     def _build(self, conn: sqlite3.Connection, fingerprint: str) -> None:
-        documents = load_documents(self.corpus_dir)
+        documents = load_documents(self.corpus_dir, extra_roots=self.extra_corpus_dirs)
         conn.execute("DROP TABLE IF EXISTS sections")
         conn.execute("DROP TABLE IF EXISTS meta")
         conn.execute(
@@ -159,7 +173,7 @@ class RagIndex:
         conn.execute("INSERT INTO meta VALUES ('schema', ?)", (SCHEMA_VERSION,))
 
     def documents(self) -> list[Document]:
-        return load_documents(self.corpus_dir)
+        return load_documents(self.corpus_dir, extra_roots=self.extra_corpus_dirs)
 
     def document_meta(self, document_id: str) -> dict | None:
         """Frontmatter metadata for one approved document, read from the current index."""
@@ -290,14 +304,54 @@ class RagIndex:
 
 
 _INDEX: RagIndex | None = None
+_INDEX_KEY: tuple[str, tuple[str, ...]] | None = None
+
+
+def _configured_extra_roots() -> list[Path]:
+    """Optional additive corpora, separated by os.pathsep. Empty by default."""
+    raw = os.getenv("BHARATBIZ_RAG_CORPUS", "").strip()
+    return [Path(part) for part in raw.split(os.pathsep) if part.strip()]
 
 
 def get_index() -> RagIndex:
-    global _INDEX
-    if _INDEX is None:
-        path = os.getenv("BHARATBIZ_RAG_DB") or DEFAULT_INDEX_PATH
-        _INDEX = RagIndex(path)
+    global _INDEX, _INDEX_KEY
+    path = os.getenv("BHARATBIZ_RAG_DB") or DEFAULT_INDEX_PATH
+    roots = _configured_extra_roots()
+    key = (path, tuple(str(root) for root in roots))
+    if _INDEX is None or _INDEX_KEY != key:
+        _INDEX = RagIndex(path, extra_corpus_dirs=roots)
+        _INDEX_KEY = key
     return _INDEX
+
+
+_HYBRID_INDEX = None
+_HYBRID_KEY: tuple[str, tuple[str, ...]] | None = None
+
+
+def get_hybrid_index():
+    """Expanded-corpus chunk index used only when a hybrid strategy is explicitly selected."""
+    global _HYBRID_INDEX, _HYBRID_KEY
+    from app.rag.hybrid import CHUNK_STRATEGIES, ChunkIndex
+
+    roots = _configured_extra_roots()
+    chunking = (os.getenv("BHARATBIZ_RAG_CHUNKS") or "section").strip().lower()
+    if chunking not in CHUNK_STRATEGIES:
+        chunking = "section"
+    key = (chunking, tuple(str(root) for root in roots))
+    if _HYBRID_INDEX is None or _HYBRID_KEY != key:
+        documents = load_documents(DEFAULT_CORPUS_DIR, extra_roots=roots)
+        _HYBRID_INDEX = ChunkIndex.from_documents(documents, chunking)
+        _HYBRID_KEY = key
+    return _HYBRID_INDEX
+
+
+def reset_index() -> None:
+    """Drop the cached singletons so tests can change corpus configuration."""
+    global _INDEX, _INDEX_KEY, _HYBRID_INDEX, _HYBRID_KEY
+    _INDEX = None
+    _INDEX_KEY = None
+    _HYBRID_INDEX = None
+    _HYBRID_KEY = None
 
 
 def retrieve(
@@ -307,9 +361,27 @@ def retrieve(
     supplier_id: str | None = None,
     as_of: date | None = None,
 ) -> list[dict]:
-    """Return up to `top_k` sections, best section per document, ranked by BM25."""
+    """Return up to `top_k` sections, best section per document.
+
+    BM25 over the curated corpus is the default. Setting BHARATBIZ_RAG_STRATEGY to
+    `dense`, `hybrid` or `hybrid_rerank` selects the measured experimental path instead;
+    an unknown value is treated as `bm25`.
+    """
+    strategy = (os.getenv("BHARATBIZ_RAG_STRATEGY") or "bm25").strip().lower()
     started = time.monotonic()
-    results = get_index().search(query, top_k=top_k, doc_types=doc_types, supplier_id=supplier_id, as_of=as_of)
+    if strategy in {"bm25_rerank", "dense", "hybrid", "hybrid_rerank"}:
+        results = get_hybrid_index().search(
+            query,
+            top_k=top_k,
+            doc_types=doc_types,
+            supplier_id=supplier_id,
+            as_of=as_of,
+            strategy=strategy,
+        )
+    else:
+        results = get_index().search(
+            query, top_k=top_k, doc_types=doc_types, supplier_id=supplier_id, as_of=as_of
+        )
     record_retrieval(
         query,
         [row["document_id"] for row in results],

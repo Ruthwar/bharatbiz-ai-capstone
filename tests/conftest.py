@@ -8,6 +8,7 @@ os.environ["BHARATBIZ_RETAIL_DB"] = ":memory:"
 os.environ["BHARATBIZ_RAG_DB"] = ":memory:"
 os.environ["BHARATBIZ_TRACE_DB"] = ":memory:"
 os.environ["BHARATBIZ_TRACE_EXPORT"] = "none"
+os.environ["BHARATBIZ_AGENT_DB"] = ":memory:"
 
 from pathlib import Path
 
@@ -25,6 +26,17 @@ def clear_retail_store():
     retail_store.reset()
     yield
     retail_store.reset()
+
+
+@pytest.fixture(autouse=True)
+def reset_safety_controls():
+    from app.safety import rate_limiter, response_cache
+
+    response_cache.reset()
+    rate_limiter.reset()
+    yield
+    response_cache.reset()
+    rate_limiter.reset()
 
 
 @pytest.fixture

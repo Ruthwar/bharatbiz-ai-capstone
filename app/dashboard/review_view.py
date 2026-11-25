@@ -60,7 +60,7 @@ def _steps(context: dict) -> list[dict]:
         },
         {
             "title": "Waiting for a person",
-            "detail": "Approval records the choice in the demo ledger only.",
+            "detail": "Approval records the choice in the review ledger only.",
             "status": "waiting",
             "substeps": [],
         },
@@ -96,7 +96,7 @@ def render_decision_steps(context: dict) -> None:
     with st.container(border=True):
         section_title(
             "How the decision was reached",
-            "The running system follows these steps in order every time, so the demo mirrors the real execution.",
+            "The running system follows these steps in order every time, including this review.",
         )
         blocks = []
         for index, step in enumerate(steps, start=1):
@@ -212,7 +212,7 @@ def render_decision(context: dict) -> None:
         selected = counterfactual["selected_plan"]
         section_title(
             "What if supplier receipts arrived on time?",
-            "Expected receipt dates replace actual dates only in this separate simulation; the real plan is unchanged.",
+            "Expected receipt dates appear only in this separate projection; the plan is unchanged.",
         )
         columns = st.columns(5)
         columns[0].metric("Option", selected["candidate_id"])
@@ -428,7 +428,7 @@ def render_advisory(context: dict) -> None:
     advisory = context["advisory_context"]
     section_title(
         "Review assessment",
-        "The figures come from the versioned synthetic records; nothing is changed by this review.",
+        "The figures come from the versioned business records; nothing is changed by this review.",
     )
     metrics = advisory.get("metrics") or []
     if metrics:

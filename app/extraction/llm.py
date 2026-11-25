@@ -12,6 +12,7 @@ from app.extraction.base import Extraction
 from app.extraction.prompts import EXTRACTION_PROMPT_VERSION, SYSTEM_PROMPT
 from app.observability import record_span
 from app.orchestration.taxonomy import INTENTS, UNCLASSIFIED
+from app.safety.pii import prepare_for_model
 from app.schemas.contracts import BusinessState, EvidenceFact, IntentMatch, MessageSubmission
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,8 @@ class LLMExtractor:
         timeout_seconds: float = 20.0,
         ca_bundle: str | None = None,
         json_mode: str = "json_object",
+        system_prompt: str | None = None,
+        prompt_version: str | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
@@ -39,6 +42,9 @@ class LLMExtractor:
         self.timeout_seconds = timeout_seconds
         self.ca_bundle = ca_bundle
         self.json_mode = json_mode
+        self.system_prompt = system_prompt or SYSTEM_PROMPT
+        self.prompt_version = prompt_version or EXTRACTION_PROMPT_VERSION
+        self.last_usage: dict = {}
 
     @classmethod
     def from_environment(cls) -> "LLMExtractor | None":
@@ -59,12 +65,13 @@ class LLMExtractor:
         )
 
     def extract(self, message: MessageSubmission, state: BusinessState) -> Extraction:
+        model_text, pii_meta = prepare_for_model(message.text)
         payload = {
             "model": self.model,
             "temperature": 0,
             "max_tokens": 512,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": self.system_prompt},
                 {
                     "role": "user",
                     "content": (
@@ -77,7 +84,7 @@ class LLMExtractor:
                             ensure_ascii=False,
                         )
                         + "\n\nMessage:\n<<<\n"
-                        + message.text
+                        + model_text
                         + "\n>>>"
                     ),
                 },
@@ -88,6 +95,7 @@ class LLMExtractor:
 
         started = time.monotonic()
         started_at = datetime.now(timezone.utc).isoformat()
+        self.last_usage = {}
         try:
             with httpx.Client(
                 timeout=self.timeout_seconds, verify=self.ca_bundle or True, trust_env=False
@@ -109,6 +117,7 @@ class LLMExtractor:
 
         latency_ms = int((time.monotonic() - started) * 1000)
         usage = body.get("usage") or {}
+        self.last_usage = usage
         try:
             content = body["choices"][0]["message"]["content"]
             parsed = json.loads(content)
@@ -129,14 +138,14 @@ class LLMExtractor:
             started,
             message,
             usage=usage,
-            detail={"intents": len(extraction.intents), "facts": len(extraction.facts)},
+            detail={"intents": len(extraction.intents), "facts": len(extraction.facts), "pii": pii_meta},
         )
         logger.info(
             "extraction_completed provider=%s model=%s prompt_version=%s message_id=%s "
             "latency_ms=%d prompt_tokens=%s completion_tokens=%s intents=%d facts=%d",
             self.base_url,
             self.model,
-            EXTRACTION_PROMPT_VERSION,
+            self.prompt_version,
             message.message_id,
             latency_ms,
             usage.get("prompt_tokens"),
@@ -163,7 +172,7 @@ class LLMExtractor:
             "generation",
             provider="openai-compatible",
             model=self.model,
-            prompt_version=EXTRACTION_PROMPT_VERSION,
+            prompt_version=self.prompt_version,
             started_at=started_at,
             latency_ms=int((time.monotonic() - started) * 1000),
             prompt_tokens=usage.get("prompt_tokens"),

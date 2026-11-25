@@ -191,7 +191,7 @@ def run_operational_scenario(
 
     assumptions = [
         "Scenario arrival dates are planning estimates, not supplier-confirmed commitments.",
-        "Candidate procurement costs are immediate outflows; dated receipts are explicit simulation inputs.",
+        "Candidate procurement costs are immediate outflows; dated receipts are explicit planning inputs.",
     ]
     if view.overlay_audit:
         assumptions.append("Scenario overlays are applied once to copies; base business state is unchanged.")
@@ -200,7 +200,7 @@ def run_operational_scenario(
     if overlays.physical_count_delta is not None:
         assumptions.append("The reported physical count is unverified; book stock is preserved for reconciliation.")
     if fixture:
-        assumptions.extend(f"Simulation input: {key}={value}" for key, value in fixture.assumptions.items())
+        assumptions.extend(f"Planning input: {key}={value}" for key, value in fixture.assumptions.items())
     for unknown in fixture.unknowns if fixture else []:
         if unknown not in event.uncertainties:
             event.uncertainties.append(unknown)

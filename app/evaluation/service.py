@@ -5,9 +5,26 @@ import threading
 from datetime import datetime, timezone
 from uuid import uuid4
 
+from app.evaluation.agent import run_agent_evaluation
 from app.evaluation.extraction import run_extraction_evaluation
+from app.evaluation.prompting import run_prompting_evaluation
 from app.evaluation.rag import run_rag_evaluation
+from app.evaluation.rag_experiments import run_rag_experiments
+from app.evaluation.track_b import run_track_b_evaluation
 from app.observability import trace_scope
+
+EVALUATION_KINDS = ("rag", "extraction", "track_b", "rag_experiments", "prompting", "agent")
+
+
+def _runner_for(kind: str):
+    return {
+        "rag": run_rag_evaluation,
+        "extraction": run_extraction_evaluation,
+        "track_b": run_track_b_evaluation,
+        "rag_experiments": run_rag_experiments,
+        "prompting": run_prompting_evaluation,
+        "agent": run_agent_evaluation,
+    }.get(kind)
 
 
 class EvaluationAlreadyRunning(RuntimeError):
@@ -25,7 +42,7 @@ class EvaluationJobManager:
         return datetime.now(timezone.utc).isoformat()
 
     def start(self, kind: str) -> dict:
-        runner = {"rag": run_rag_evaluation, "extraction": run_extraction_evaluation}.get(kind)
+        runner = _runner_for(kind)
         if runner is None:
             raise ValueError("Unknown evaluation kind")
         with self._lock:
@@ -79,7 +96,7 @@ class EvaluationJobManager:
         with self._lock:
             job = self._jobs[job_id]
             job["result"] = result
-            job["rows"] = result["rows"]
+            job["rows"] = result.get("rows") or []
             job["status"] = "completed"
             job["completed_at"] = self._now()
             self._latest[job["kind"]] = job_id
@@ -95,7 +112,7 @@ class EvaluationJobManager:
             job_ids = dict(self._latest)
         return {
             kind: self.get(job_id) if job_id else None
-            for kind in ("rag", "extraction")
+            for kind in EVALUATION_KINDS
             for job_id in (job_ids.get(kind),)
         }
 

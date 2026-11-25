@@ -110,6 +110,19 @@ def _score(
     }
 
 
+def score_extraction(
+    extraction: Extraction,
+    record: dict,
+    latency_ms: float,
+    violations: list[str],
+    fallback: bool,
+    error: str | None,
+    raw_extraction: Extraction | None = None,
+) -> dict:
+    """Public entry point so prompting experiments use exactly the same scoring as the dashboard job."""
+    return _score(extraction, record, latency_ms, violations, fallback, error, raw_extraction)
+
+
 def _run_rules(message: MessageSubmission, state: BusinessState) -> dict:
     started = time.perf_counter()
     extraction = RulesExtractor().extract(message, state)

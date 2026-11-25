@@ -10,9 +10,11 @@ import re
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
+from typing import Iterable
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CORPUS_DIR = PROJECT_ROOT / "data" / "knowledge_docs"
+TRACK_B_CORPUS_DIR = PROJECT_ROOT / "data" / "knowledge_docs_track_b"
 
 REQUIRED_FIELDS = (
     "document_id",
@@ -149,13 +151,28 @@ def parse_document(path: Path) -> Document:
     )
 
 
-def load_documents(root: Path | None = None) -> list[Document]:
+def corpus_files(corpus_dir: Path, extra_roots: Iterable[Path] | None = None) -> list[Path]:
+    """All Markdown files across the base corpus and any additive experiment roots."""
+    roots = [Path(corpus_dir)]
+    roots.extend(Path(root) for root in extra_roots or ())
+    paths: list[Path] = []
+    for root in roots:
+        if not root.is_dir():
+            raise CorpusError(f"Corpus directory not found: {root}")
+        paths.extend(sorted(root.glob("*.md")))
+    if not paths:
+        raise CorpusError(f"No documents in {', '.join(str(root) for root in roots)}")
+    return paths
+
+
+def load_documents(root: Path | None = None, extra_roots: Iterable[Path] | None = None) -> list[Document]:
+    """Parse the base corpus and optionally any additive corpus roots.
+
+    With no arguments this reads only `data/knowledge_docs/`, so the runtime citation
+    corpus stays exactly the curated 33 documents.
+    """
     corpus_dir = Path(root) if root else DEFAULT_CORPUS_DIR
-    if not corpus_dir.is_dir():
-        raise CorpusError(f"Corpus directory not found: {corpus_dir}")
-    documents = [parse_document(path) for path in sorted(corpus_dir.glob("*.md"))]
-    if not documents:
-        raise CorpusError(f"No documents in {corpus_dir}")
+    documents = [parse_document(path) for path in corpus_files(corpus_dir, extra_roots)]
     seen: set[str] = set()
     for document in documents:
         if document.document_id in seen:

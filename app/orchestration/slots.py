@@ -97,9 +97,9 @@ DECISION_RELEVANT: dict[str, tuple[str, ...]] = {
 
 QUESTIONS: dict[tuple[str, str], dict[str, str]] = {
     ("demand_spike", "demand_uplift_percent"): {
-        "English": "What demand uplift percentage should be simulated?",
-        "Hinglish": "Demand uplift kitne percent simulate karna hai?",
-        "Hindi": "कितने प्रतिशत मांग वृद्धि का अनुकरण करना है?",
+        "English": "What demand uplift percentage should be used?",
+        "Hinglish": "Demand uplift kitne percent use karna hai?",
+        "Hindi": "कितने प्रतिशत मांग वृद्धि लागू करनी है?",
     },
     ("stock_discrepancy", "physical_count_units"): {
         "English": "What is the reported physical count in base units?",

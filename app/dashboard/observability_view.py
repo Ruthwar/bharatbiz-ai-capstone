@@ -35,6 +35,8 @@ def _session_label(session: str) -> str:
         return f"Message {rest}"
     if prefix == "evaluation":
         return f"Evaluation · {rest}"
+    if prefix == "agent":
+        return f"Agent · {rest}"
     return session
 
 
@@ -120,7 +122,7 @@ def _render_activity(data: dict) -> None:
 
     section_title(
         "Sessions",
-        "A session groups work: a scenario run, an inbound conversation or an evaluation job.",
+        "A session groups work: a scenario run, inbound conversation, agent review or evaluation job.",
     )
     st.dataframe(
         [
@@ -249,8 +251,8 @@ def _render_method() -> None:
           `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` to also send spans to the documented
           Langfuse ingestion endpoint. This hook has not been verified against a live Langfuse
           instance in this project.
-        - **Reset clears it.** The sidebar demo reset deletes recorded spans along with the other
-          demo state; the evaluation results in the Evaluation tab are separate.
+        - **Reset clears it.** The sidebar workspace reset deletes recorded spans along with the
+          other workspace state; the evaluation results in the Evaluation tab are separate.
         """
     )
     st.info(

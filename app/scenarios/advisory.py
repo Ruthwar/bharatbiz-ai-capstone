@@ -336,6 +336,8 @@ def run_credit_check(
 ) -> dict:
     subject = _subject(fixture, extraction, "retailer_id", "sku_id")
     retailer_id = subject.get("retailer_id")
+    if not retailer_id and message.sender and message.sender.party_type == "retailer":
+        retailer_id = message.sender.party_id
     sku_id = subject.get("sku_id") or (fixture.target_sku_id if fixture else None)
     units = int((fixture.subject.get("order_quantity_units") if fixture else 0) or 0)
     if not units and extraction.fact("quantity") is not None:
@@ -350,7 +352,9 @@ def run_credit_check(
     order_value = (unit_cost * units).quantize(Decimal("0.01"))
     receivables = tables["receivables"]
     overdue = [row for row in receivables if row["retailer_id"] == retailer_id and row["status"] == "overdue"]
-    overdue_total = sum(Decimal(row["amount_rupees"]) for row in overdue).quantize(Decimal("0.01"))
+    overdue_total = sum((Decimal(row["amount_rupees"]) for row in overdue), Decimal("0")).quantize(
+        Decimal("0.01")
+    )
     credit = _find(tables["credit_limits"], "retailer_id", retailer_id)
     limit = Decimal(credit["credit_limit_rupees"]) if credit else Decimal("0")
     exposure = (overdue_total + order_value).quantize(Decimal("0.01"))
@@ -550,7 +554,7 @@ def run_credit_check(
         metrics,
         sections, steps,
         [f"receivable:{row['receivable_id']}" for row in overdue],
-        ["Exposure is a simulation input; no credit limit is enforced or changed by the system.", "Expected future collections are not counted."],
+        ["Exposure is a planning input; no credit limit is enforced or changed by the system.", "Expected future collections are not counted."],
         [f"Credit decision: {decision.replace('_', ' ')}. This is a review flag, not a credit decision."],
         outcome=outcome,
         options=options,
@@ -622,7 +626,7 @@ def run_scheme_claim(
         },
         {
             "title": "Claim checks",
-            "description": "Each check compares the retailer's claim with the approved terms at the demo date.",
+            "description": "Each check compares the retailer's claim with the approved terms at the decision date.",
             "rows": [
                 {"Check": label, "Result": "passed" if passed else "failed", "Detail": detail}
                 for label, passed, detail in checks
@@ -643,10 +647,10 @@ def run_scheme_claim(
         [
             {"label": "Claimed", "value": f"{claimed_discount}%", "note": f"{claimed_units} units", "tone": "warning"},
             {"label": "Approved", "value": approved_label, "note": f"Minimum {min_units} units", "tone": "accent"},
-            {"label": "Checks failed", "value": str(len(mismatch)), "note": "At the demo date", "tone": "danger" if mismatch else "success"},
+            {"label": "Checks failed", "value": str(len(mismatch)), "note": "At the decision date", "tone": "danger" if mismatch else "success"},
         ],
         sections, steps, [f"scheme:{scheme['scheme_id']}"] if scheme else [],
-        ["Scheme terms are synthetic and read from the versioned register.", "No invoice is changed by this review."],
+        ["Scheme terms are read from the versioned register.", "No invoice is changed by this review."],
         [f"Scheme claim status: {status.replace('_', ' ')}."],
         outcome={
             "claim_status": status,
@@ -1000,7 +1004,7 @@ def run_short_dated_stock(
             [{"label": "Batch", "value": "not found", "note": "Manual lookup required", "tone": "warning"}],
             [{"title": "Batch", "description": "No matching record.", "rows": [{"Batch": subject.get('batch_id') or 'not found'}]}],
             _opening_steps(message, event, extraction) + [_human_step("Check expiry and return terms manually.")],
-            [], ["Expiry dates are synthetic."], ["Batch record not found."],
+            [], ["Expiry dates are unavailable for this batch."], ["Batch record not found."],
             decision_mode=decision_mode,
         )
     expiry = date.fromisoformat(batch["expiry_date"])
@@ -1011,7 +1015,7 @@ def run_short_dated_stock(
     requested = sum(int(row["quantity_units"]) for row in orders)
     summary = (
         f"Batch {batch['batch_id']} ({batch['quantity_units']} {batch['unit']} of {batch['sku_id']}) expires on "
-        f"{batch['expiry_date']}, {days_left} days from the demo date. The supplier return window is {window} days, "
+        f"{batch['expiry_date']}, {days_left} days from the decision date. The supplier return window is {window} days, "
         + ("so the batch is inside the return window. Recommend a return or priority dispatch for human approval."
            if eligible else "so the batch is outside the return window. Recommend priority dispatch and closer monitoring.")
     )
@@ -1055,7 +1059,7 @@ def run_short_dated_stock(
             {"label": "Open demand", "value": str(requested), "note": batch["unit"], "tone": "warning"},
         ],
         sections, steps, [f"batch:{batch['batch_id']}"],
-        ["Expiry and return-window values are synthetic scenario inputs.", "No goods are moved, returned or discounted by this review."],
+        ["Expiry and return-window values come from the batch record and supplier terms.", "No goods are moved, returned or discounted by this review."],
         ["Short-dated stock flagged for human decision."],
         outcome={
             "batch_id": batch["batch_id"],
@@ -1247,7 +1251,7 @@ def run_dispatch_planning(
             [{"label": "Route", "value": "not found", "note": "Manual lookup required", "tone": "warning"}],
             [{"title": "Route", "description": "No matching record.", "rows": [{"Route": subject.get('route_id') or 'not found'}]}],
             _opening_steps(message, event, extraction) + [_human_step("Build and check the load plan manually.")],
-            [], ["Vehicle capacity is synthetic."], ["Route record not found."],
+            [], ["Vehicle capacity is not on record."], ["Route record not found."],
             decision_mode=decision_mode,
         )
     orders = [row for row in tables["dispatch_orders"] if row["route_id"] == route["route_id"]]
@@ -1345,7 +1349,7 @@ def run_dispatch_planning(
         return _result(
             message, event, extraction, fixture, state, "dispatch_review", summary,
             metrics, sections, steps, [f"route:{route['route_id']}"],
-            ["Capacity and order assignments are synthetic scenario inputs.", "No dispatch instruction or message is sent by this review."],
+            ["Capacity and order assignments come from the route record.", "No dispatch instruction or message is sent by this review."],
             ["No policy-grounded option was selected."],
             outcome={
                 "route_id": route["route_id"],
@@ -1454,7 +1458,7 @@ def run_dispatch_planning(
             {"label": "Departure", "value": route["departure_date"], "note": route["vehicle_label"], "tone": "warning"},
         ],
         sections, steps, [f"route:{route['route_id']}"],
-        ["Capacity and order assignments are synthetic scenario inputs.", "No dispatch instruction or message is sent by this review."],
+        ["Capacity and order assignments come from the route record.", "No dispatch instruction or message is sent by this review."],
         ["Route capacity exceeded." if selected["deferred_orders"] else "All orders fit within capacity."],
         outcome={
             "route_id": route["route_id"],

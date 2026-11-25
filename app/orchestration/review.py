@@ -301,7 +301,7 @@ def _operational_steps(result: dict, context: dict, selected: bool) -> list[dict
             {
                 "title": "Waiting for a person",
                 "detail": (
-                    "Nothing has been purchased, paid or messaged. Approving records this choice in the demo "
+                    "Nothing has been purchased, paid or messaged. Approving records this choice in the review "
                     "ledger only; rejecting or editing it changes nothing in the business data."
                 ),
                 "status": "waiting",
@@ -510,13 +510,13 @@ def build_review_context(result: dict) -> dict | None:
             if decision_mode == "policy_grounded_llm":
                 step_title = "Policy rules checked"
                 detail = (
-                    f"{len(references)} policy passage(s) were retrieved for this event, party and demo date "
+                    f"{len(references)} policy passage(s) were retrieved for this event, party and decision date "
                     f"and grounded the selection: {documents}."
                 )
             else:
                 step_title = "Policy rules listed, not applied"
                 detail = (
-                    f"{len(references)} policy passage(s) are in force for this event, party and demo date: "
+                    f"{len(references)} policy passage(s) are in force for this event, party and decision date: "
                     f"{documents}. The fixed ranking never reads them; they are listed only so a reviewer can "
                     "compare the rule with the choice."
                 )

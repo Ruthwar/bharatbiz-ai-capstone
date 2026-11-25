@@ -10,5 +10,6 @@ data/pilot_deidentified/*
 data/evaluation_runs/
 data/runtime/
 *.log
+tmp/
 desktop.ini
 ~$*

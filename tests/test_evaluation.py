@@ -134,3 +134,55 @@ def test_evaluation_api_runs_rag_and_rejects_disabled_llm():
     assert client.get("/api/v1/evaluations/latest").json()["rag"]["job_id"] == job_id
     assert client.post("/api/v1/evaluations/extraction/run").status_code == 409
     assert client.get("/api/v1/evaluations/not-a-job").status_code == 404
+
+
+def test_job_manager_runs_track_b_and_experiment_kinds(monkeypatch):
+    def fake_track_b(progress=None):
+        if progress:
+            progress(
+                {
+                    "step": "case_completed",
+                    "title": "TB-001: passed",
+                    "current": 1,
+                    "total": 1,
+                }
+            )
+        return {"summary": {"cases": 1, "passed": 1}, "rows": [{"case_id": "TB-001"}]}
+
+    def fake_experiments(progress=None):
+        if progress:
+            progress(
+                {
+                    "step": "strategy_completed",
+                    "title": "base_section_bm25: recall@3 100.0%",
+                    "current": 1,
+                    "total": 1,
+                }
+            )
+        return {"strategies": []}
+
+    monkeypatch.setattr("app.evaluation.service.run_track_b_evaluation", fake_track_b)
+    monkeypatch.setattr("app.evaluation.service.run_rag_experiments", fake_experiments)
+    manager = EvaluationJobManager()
+
+    for kind in ("track_b", "rag_experiments"):
+        started = manager.start(kind)
+        deadline = time.monotonic() + 2
+        while manager.get(started["job_id"])["status"] in {"queued", "running"}:
+            assert time.monotonic() < deadline
+            time.sleep(0.01)
+        completed = manager.get(started["job_id"])
+        assert completed["status"] == "completed"
+        assert completed["kind"] == kind
+        assert completed["current"] == 1
+        assert completed["rows"] == ([{"case_id": "TB-001"}] if kind == "track_b" else [])
+        assert manager.latest()[kind]["job_id"] == started["job_id"]
+
+    assert set(manager.latest()) == {
+        "rag",
+        "extraction",
+        "track_b",
+        "rag_experiments",
+        "prompting",
+        "agent",
+    }

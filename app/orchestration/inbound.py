@@ -5,7 +5,7 @@ from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from app.extraction.base import Extraction
+from app.extraction.base import Extraction, Extractor
 from app.extraction.rules import product_clarification_options
 from app.orchestration import router
 from app.orchestration.acks import ack_text, language_key
@@ -15,6 +15,8 @@ from app.observability import trace_scope
 from app.orchestration.slots import SLOT_SPECS, missing_slots, next_question
 from app.orchestration.taxonomy import UNCLASSIFIED
 from app.orchestration.workflow import PlanState, plan_graph
+from app.safety.injection import scan as scan_injection
+from app.safety.pii import scan as scan_pii
 from app.scenarios.contracts import ScenarioFixture
 from app.schemas.contracts import (
     EvidenceFact,
@@ -182,6 +184,11 @@ def _slot_gate(flow: InboundState) -> dict:
         rounds=rounds,
     ).model_dump(mode="json")
     payload["result"] = result
+    payload["safety"] = {
+        "injection": scan_injection(flow["submission"].text).summary(),
+        "pii": scan_pii(message.text).summary(),
+        "note": "Signals are advisory; they never approve, execute or change routing.",
+    }
 
     return {
         "payload": payload,
@@ -277,6 +284,7 @@ def process_inbound(
     scenario: ScenarioFixture | None = None,
     retail_store: RetailStore = default_retail_store,
     decision_mode: str = "deterministic",
+    extractor: Extractor | None = None,
 ) -> dict:
     """Run one inbound message through the graph. Failures are acknowledged and triaged, never dropped."""
     conversation_id = message.conversation_id or message.message_id
@@ -294,6 +302,7 @@ def process_inbound(
                     "data_dir": data_dir,
                     "scenario": scenario,
                     "decision_mode": decision_mode,
+                    "extractor": extractor,
                     "duplicate": False,
                 }
             )
