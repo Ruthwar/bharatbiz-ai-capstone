@@ -55,6 +55,7 @@ def expectation_value(key: str, result: dict):
         "catalogue_match": market.get("catalogue_match"),
         "assortment_changed": market.get("assortment_changed"),
     }
+    values.update((result.get("advisory_context") or {}).get("outcome") or {})
     if key not in values:
         raise KeyError(f"No evaluator is registered for expectation {key}")
     return values[key]

@@ -11,8 +11,8 @@ from app.verification.checks import verify_plan
 def _selected_plan(state):
     inventory = analyze_inventory(state, "SKU-003", 12)
     orders = analyze_orders(state, "SKU-003")
-    options = build_supplier_options(state, "SKU-003", 46, "SUP-005", 2, date(2026, 11, 4))
-    plans = build_candidate_plans(state, "SKU-003", 56, options, date(2026, 11, 4))
+    options = build_supplier_options(state, "SKU-003", 46, "SUP-005", 2, date(2026, 11, 26))
+    plans = build_candidate_plans(state, "SKU-003", 56, options, date(2026, 11, 26))
     return inventory, orders, plans, select_best_plan(plans)
 
 

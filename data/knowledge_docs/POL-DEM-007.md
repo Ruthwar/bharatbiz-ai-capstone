@@ -8,7 +8,7 @@ effective_from: 2026-11-15
 supersedes: none
 owner: Demand Planning
 classification: synthetic
-parties: RET-all, SUP-002, SUP-003, SUP-005
+parties: all
 skus: all
 licence: CC0-1.0 (synthetic text authored for this BharatBiz capstone)
 source_url: none
@@ -40,7 +40,7 @@ This policy governs the creation, comparison and use of demand scenarios for inv
 
 **R4 - Deterministic inputs win.** Stock, prices, lead times, tax and supplier capacity come from the versioned business state. A scenario may alter demand only when the scenario explicitly permits it.
 
-**R5 - Compare like with like.** Scenarios use the same planning horizon, ranking rules, affordability rules and state version unless the comparison says otherwise.
+**R5 - Compare like with like.** Each run uses one mode selected by the reviewer, the named planning horizon, the eligible candidate set, verified outcomes and the same state version. When evaluating the modes across separate runs, keep those inputs constant. Deterministic mode follows its published ranking rule; Policy-grounded LLM mode uses applicable retrieved natural-language policies and records its rationale and policy versions.
 
 **R6 - Simulation does not execute.** Running or approving a scenario changes a demo record only. It does not create an order, reserve stock, move money or message a party.
 
@@ -48,11 +48,11 @@ This policy governs the creation, comparison and use of demand scenarios for inv
 
 ## 4. Required output
 
-Each run records the scenario id, state version, baseline, assumptions, candidate plans, selected plan, unmet and late units, total cost, ending cash, headroom and run timestamp. Results that cannot be reproduced from these fields are invalid.
+Each run records the scenario id, state version, baseline, assumptions, eligible and excluded plans, deterministic baseline result, policy-grounded model result or abstention, retrieved policy versions and citations, unmet and late units, total cost, ending cash, headroom and run timestamp. Results that cannot be reproduced from these fields are invalid.
 
 ## 5. Example
 
-The baseline requests 100 units of a SKU inside the horizon. A +20% demand scenario records a request of 120 units, runs the same candidate ranking and shows the additional unmet units and cash impact. It must not alter the baseline order to 120 units.
+The baseline requests 100 units of a SKU inside the horizon. A +20% demand scenario records a request of 120 units, creates and verifies the candidate plans, then shows the deterministic baseline beside the policy-grounded model recommendation using the same options. It shows any difference in unmet units and cash impact. The scenario must not alter the baseline order to 120 units.
 
 ## 6. Audit
 

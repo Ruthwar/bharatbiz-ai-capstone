@@ -1,0 +1,3 @@
+route_id,vehicle_label,capacity_units,area,departure_date,status,source_type
+RTE-001,Van AP-09,40,Kukatpally,2026-11-24,planned,synthetic
+RTE-002,Van AP-14,60,Secunderabad,2026-11-24,planned,synthetic

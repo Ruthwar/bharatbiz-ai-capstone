@@ -5,7 +5,11 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from app.channels.chat import ChatInbound, to_submission
+from app.decision import decision_model_status
+from app.evaluation import EvaluationAlreadyRunning, evaluation_jobs
 from app.extraction import configured_extractor
+from app.observability.export import export_settings
+from app.observability.traces import reset_traces, trace_store
 from app.orchestration.inbound import process_inbound
 from app.orchestration.review_actions import DraftSafetyError, decide_review
 from app.orchestration.workflow import process_message
@@ -25,6 +29,40 @@ def health() -> dict[str, str]:
     return {"status": "ok", "mode": "mock"}
 
 
+@app.post("/api/v1/demo/reset")
+def reset_demo() -> dict:
+    ledger.reset()
+    retail_store.reset()
+    reset_traces()
+    return {
+        "status": "reset",
+        "cleared": [
+            "scenario_results",
+            "pending_intakes",
+            "review_queue",
+            "retailer_interactions",
+            "cases",
+            "reply_drafts",
+            "market_observations",
+            "llm_traces",
+        ],
+    }
+
+
+@app.get("/api/v1/observability")
+def observability() -> dict:
+    """Local model and retrieval spans, with the optional export configuration."""
+    return {**trace_store.summary(), "export": export_settings()}
+
+
+@app.get("/api/v1/observability/traces/{trace_id}")
+def observability_trace(trace_id: str) -> dict:
+    trace = trace_store.trace(trace_id)
+    if trace is None:
+        raise HTTPException(status_code=404, detail="Unknown trace")
+    return trace
+
+
 @app.post("/api/v1/messages/process")
 def submit_message(message: MessageSubmission) -> dict:
     try:
@@ -42,7 +80,9 @@ def receive_inbound(payload: ChatInbound) -> dict:
         state_version = payload.state_version or load_business_state().state_version
     except StateLoadError as exc:
         raise HTTPException(status_code=500, detail="Synthetic operational state is unavailable") from exc
-    return process_inbound(to_submission(payload, state_version), ledger=ledger)
+    return process_inbound(
+        to_submission(payload, state_version), ledger=ledger, decision_mode=payload.decision_mode
+    )
 
 
 @app.get("/api/v1/status")
@@ -55,8 +95,33 @@ def inference_status() -> dict:
         "llm_enabled": enabled,
         "provider": os.getenv("LLM_PROVIDER", "none") if enabled else "none",
         "model": getattr(extractor, "model", "") if enabled else "",
-        "note": "Model output is validated; planning and decisions stay deterministic and human-approved.",
+        "decision_llm_enabled": decision_model_status()["enabled"],
+        "decision_model": decision_model_status()["model"],
+        "note": "Extraction and recommendation modes are selectable; calculations, eligibility and human approval remain controlled.",
     }
+
+
+@app.post("/api/v1/evaluations/{kind}/run", status_code=202)
+def start_evaluation(kind: Literal["rag", "extraction"]) -> dict:
+    if kind == "extraction" and configured_extractor().name != "llm":
+        raise HTTPException(status_code=409, detail="Enable LLM extraction to compare rules with the configured model.")
+    try:
+        return evaluation_jobs.start(kind)
+    except EvaluationAlreadyRunning as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/evaluations/latest")
+def latest_evaluations() -> dict:
+    return evaluation_jobs.latest()
+
+
+@app.get("/api/v1/evaluations/{job_id}")
+def evaluation_status(job_id: str) -> dict:
+    try:
+        return evaluation_jobs.get(job_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Unknown evaluation job") from exc
 
 
 @app.get("/api/v1/parties")
@@ -82,6 +147,7 @@ def scenarios() -> list[dict]:
 
 class ScenarioRunRequest(BaseModel):
     persist_review: bool = False
+    decision_mode: Literal["deterministic", "policy_grounded_llm"] = "deterministic"
 
 
 @app.post("/api/v1/scenarios/{scenario_id}/run")
@@ -89,7 +155,11 @@ def execute_scenario(scenario_id: str, payload: ScenarioRunRequest | None = None
     if scenario_id not in {row["scenario_id"] for row in scenario_summaries()}:
         raise HTTPException(status_code=404, detail="Unknown scenario")
     try:
-        return run_scenario(scenario_id, persist=bool(payload and payload.persist_review))
+        return run_scenario(
+            scenario_id,
+            persist=bool(payload and payload.persist_review),
+            decision_mode=payload.decision_mode if payload else "deterministic",
+        )
     except (ValueError, StateVersionMismatch) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except StateLoadError as exc:

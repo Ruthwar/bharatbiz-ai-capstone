@@ -69,10 +69,10 @@ Money never appears in the message contract. It comes from the versioned state.
     "message_id": "DEMO-SCN-003-001",
     "source_type": "supplier_update",
     "text": "Sri Venkateswara FMCG Supply reports a two-day delay for Cooking oil 1 L pouch; revised date is not confirmed.",
-    "observed_at": "2026-11-01T09:00:00+05:30",
+    "observed_at": "2026-11-23T09:00:00+05:30",
     "language": "English",
     "consent_status": "synthetic",
-    "state_version": "synthetic-v2-seed-20261105"
+    "state_version": "synthetic-v3-live-20261123"
   },
   "assumptions": {
     "sku_id": "SKU-003",
@@ -106,8 +106,8 @@ Relevant values for this scenario:
 
 | Item | Value |
 |---|---|
-| State version | `synthetic-v2-seed-20261105` |
-| As-of date | 2026-11-01 |
+| State version | `synthetic-v3-live-20261123` |
+| As-of date | 2026-11-23 |
 | Opening cash | ₹250,000.00 |
 | Minimum cash buffer | ₹50,000.00 |
 | SKU-003 on hand | 62 litres |
@@ -547,7 +547,7 @@ The key compatibility condition is that any new extractor must emit the existing
 | Session-only approval | Persisted human decision plus an outbox for approved actions | Approval must be attributable, and actions must be executed separately and safely |
 | Current verifier | Extended verifier for AI output validity and retrieved-source grounding | The verifier must check the new inputs, not just the old arithmetic |
 
-### 13.4 Target architecture with LLM and RAG
+### 13.4 Target architecture with two decision modes
 
 ```text
 Message
@@ -556,15 +556,18 @@ Message
   -> evidence-span validation (text[start:end] == evidence_span)
   -> catalogue authority check (SKU must exist; ambiguous -> clarify)
   -> deterministic specialist agents
-  -> RAG retrieval over approved policies and SOPs
-  -> candidate generation and ranking
-  -> independent verifier (facts, arithmetic, constraints, citations)
-  -> recommendation with evidence and document citations
+  -> candidate generation from versioned state
+  -> hard eligibility checks and independent verification
+  -> reviewer selects Recommendation mode in the UI
+       -> Deterministic: existing fixed ranking
+       -> Policy-grounded LLM: RAG retrieval, policy interpretation and candidate selection
+  -> independent validation of the selected candidate and, for LLM mode, policy citations
+  -> selected recommendation, alternatives, rationale and evidence
   -> human review
   -> optional approved-action outbox
 ```
 
-The LLM never computes inventory, cost, cash, or feasibility. RAG never supplies business state. The state remains the sole source of quantities, prices, and balances.
+The UI lets the reviewer choose one mode for each run. Deterministic mode does not call the model; it applies the current fixed ranking. Policy-grounded LLM mode retrieves and interprets natural-language policies to choose among the same eligible candidates. The LLM never computes inventory, cost, cash or feasibility. RAG never supplies business state. The state remains the sole source of quantities, prices and balances. The reviewer approves or rejects the selected recommendation. If the LLM mode is unavailable or abstains, the app must say so; it must not silently switch to deterministic mode.
 
 ### 13.5 LLM extraction contract
 
@@ -605,7 +608,7 @@ The LLM should be evaluated on exact-span match, field precision and recall, and
 
 ### 13.6 RAG contract
 
-`app/rag/retrieval.py` currently returns an empty list. A real implementation should provide:
+`app/rag/retrieval.py` currently provides SQLite FTS5 lexical retrieval. The decision flow should call it before the model recommendation and retain the retrieval details for audit. The interface is:
 
 ```python
 def retrieve(query: str, top_k: int = 5) -> list[dict]:
@@ -633,7 +636,7 @@ Rules:
 6. Keep document versions so a past recommendation can be reproduced.
 7. Separate "policy says" from "state says" in the output.
 
-In SCN-003, RAG is optional. The supplier-delay arithmetic does not need document retrieval. RAG becomes useful for questions such as which escalation policy applies, what the approved substitution rule is, or how a delay should be communicated under the current SOP. Those citations belong beside the recommendation, not inside the arithmetic.
+In SCN-003, deterministic arithmetic and candidate feasibility remain unchanged. When the reviewer selects Policy-grounded LLM, RAG supplies natural-language delay, service and cost policies before the model chooses an option. When the reviewer selects Deterministic, the existing fixed ranker chooses without an LLM policy call. The review card labels which mode produced the recommendation and shows its relevant rationale and evidence.
 
 ### 13.7 Verification gates for AI output
 
@@ -665,11 +668,11 @@ A low-risk path from the current demo to real AI and RAG:
 1. **Make assumptions explicit.** Add a `ScenarioConfig` model and load delayed units, horizon, original supplier, and cost timing from the fixture. No AI yet; this removes hidden behavior.
 2. **Introduce an extraction interface.** Add a provider protocol with a mock implementation that wraps the current regex logic. Keep all tests green.
 3. **Add an LLM implementation behind the same interface.** Constrain it with JSON schema, temperature 0, and the pre-plan gates. Compare it against the mock on a labeled set before enabling it by default.
-4. **Add retrieval with citations.** Implement `retrieve()` against approved documents and require citations for policy claims. Keep SCN-003 arithmetic unchanged.
-5. **Make ranking policy explicit.** Move the tuple into configuration or an OR-Tools model, then verify that the SCN-003 result is explainable under the chosen policy.
+4. **Add the policy-grounded decision mode.** Retrieve current natural-language policies before recommendation; keep the deterministic ranker as the baseline. Give the model only eligible, verified candidates and their calculated outcomes.
+5. **Add the mode selector and validate the selected result.** Let the reviewer choose Deterministic or Policy-grounded LLM. Validate the selected candidate and, in LLM mode, its citations; show the selected mode, alternatives, rationale and any abstention.
 6. **Add persistence and audit.** Store requests, extraction outputs, plans, verification results, and human decisions with idempotency keys and state-version concurrency checks.
 7. **Add an approved-action outbox.** Only after a human approves, and only for explicitly authorized action types, with separate credentials and audit. This remains outside the capstone demo.
-8. **Expand evaluation.** Track extraction accuracy, span exactness, clarification rate, plan feasibility, verifier catch rate, citation groundedness, and end-to-end scenario pass rate. Keep synthetic and real results separate.
+8. **Expand evaluation.** Track extraction accuracy, span exactness, clarification rate, plan feasibility, verifier catch rate, citation groundedness, agreement/disagreement between modes, model choice quality and abstention, and end-to-end scenario pass rate. Keep synthetic and real results separate.
 
 Steps 1 and 2 are worth doing even if the team never enables an LLM: they turn hidden assumptions into data and make the current rules replaceable.
 
@@ -678,8 +681,8 @@ Steps 1 and 2 are worth doing even if the team never enables an LLM: they turn h
 Be explicit about the gaps:
 
 - The message-specific regexes are demo scaffolding, not a production NLU layer.
-- The empty retriever is a contract placeholder, not RAG.
-- The fixed ranking is a policy choice, not a general optimizer.
+- The lexical retriever currently supplies policy citations to review context; it is not yet used to make a model recommendation.
+- The fixed ranking remains the Deterministic mode, not a general optimizer or the policy-grounded LLM mode.
 - The fixture is documentation, not runtime configuration.
 - The dashboard approval is a UI state, not an audited decision.
 - The current state loader assumes local synthetic files, not a transactional system of record.

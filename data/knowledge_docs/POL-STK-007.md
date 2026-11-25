@@ -8,7 +8,7 @@ effective_from: 2026-11-15
 supersedes: none
 owner: Warehouse Operations
 classification: synthetic
-parties: RET-all, SUP-002, SUP-003, SUP-005
+parties: all
 skus: all
 licence: CC0-1.0 (synthetic text authored for this BharatBiz capstone)
 source_url: none

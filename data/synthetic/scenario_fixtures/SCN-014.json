@@ -1,0 +1,36 @@
+{
+  "scenario_id": "SCN-014",
+  "name": "Short-dated stock and return window",
+  "description": "A tea batch expires in nine days, inside the supplier's 14-day return window. The system flags the return option and the open demand that could absorb the stock first.",
+  "message": {
+    "message_id": "DEMO-SCN-014-001",
+    "source_type": "synthetic",
+    "text": "Batch BATCH-002 of Tea 1 kg expires on 2026-12-02, inside the 14-day supplier return window. Please plan a return or priority dispatch.",
+    "observed_at": "2026-11-23T15:40:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v3-live-20261123",
+    "sender": {
+      "party_type": "sales_rep",
+      "party_id": "REP-017",
+      "channel": "api"
+    }
+  },
+  "target_sku_id": "SKU-009",
+  "subject": {
+    "batch_id": "BATCH-002"
+  },
+  "unknowns": [
+    "return_authorisation",
+    "markdown_approval"
+  ],
+  "expected": {
+    "review_kind": "expiry_review",
+    "review_status": "pending_review",
+    "batch_id": "BATCH-002",
+    "days_to_expiry": 9,
+    "supplier_return_window_days": 14,
+    "return_eligible": true,
+    "executes_return": false
+  }
+}

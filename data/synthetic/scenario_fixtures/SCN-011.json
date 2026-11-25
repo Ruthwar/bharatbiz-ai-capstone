@@ -1,0 +1,41 @@
+{
+  "scenario_id": "SCN-011",
+  "name": "Scheme claim mismatch",
+  "description": "A retailer claims a 10 percent discount on 30 litres under SCM-002, but the approved scheme gives 7.5 percent with a 40-litre minimum.",
+  "message": {
+    "message_id": "DEMO-SCN-011-001",
+    "source_type": "retailer_message",
+    "text": "We are claiming the 10 percent scheme discount on 30 litres of Cooking oil 1 L pouch under SCM-002; invoice INV-0110.",
+    "observed_at": "2026-11-23T15:10:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v3-live-20261123",
+    "sender": {
+      "party_type": "retailer",
+      "party_id": "RET-002",
+      "channel": "whatsapp"
+    }
+  },
+  "target_sku_id": "SKU-003",
+  "subject": {
+    "scheme_id": "SCM-002",
+    "retailer_id": "RET-002",
+    "sku_id": "SKU-003",
+    "invoice_reference": "INV-0110",
+    "claimed_discount_percent": 10,
+    "claimed_quantity_units": 30
+  },
+  "unknowns": [
+    "invoice_value",
+    "credit_note_approval"
+  ],
+  "expected": {
+    "review_kind": "scheme_claim_review",
+    "review_status": "pending_review",
+    "claim_status": "claim_mismatch",
+    "claimed_discount_percent": 10,
+    "approved_discount_percent": "7.50",
+    "minimum_quantity_units": 40,
+    "executes_discount": false
+  }
+}

@@ -6,24 +6,28 @@
     "message_id": "DEMO-SCN-009-001",
     "source_type": "retailer_message",
     "text": "Customers are requesting Cooking oil 500 ml pouch. Can you supply this smaller pack?",
-    "observed_at": "2026-11-01T14:00:00+05:30",
+    "observed_at": "2026-11-23T14:00:00+05:30",
     "language": "English",
     "consent_status": "synthetic",
-    "state_version": "synthetic-v2-seed-20261105",
-    "sender": {"party_type": "retailer", "party_id": "RET-009", "channel": "whatsapp"}
+    "state_version": "synthetic-v3-live-20261123",
+    "sender": {
+      "party_type": "retailer",
+      "party_id": "RET-009",
+      "channel": "whatsapp"
+    }
   },
   "history": [
     {
       "request_id": "REQ-SCN-009-001",
       "retailer_id": "RET-006",
-      "reported_at": "2026-10-30T10:00:00+05:30",
+      "reported_at": "2026-11-21T10:00:00+05:30",
       "product_label": "Cooking oil 500 ml pouch",
       "request_count": 4
     },
     {
       "request_id": "REQ-SCN-009-002",
       "retailer_id": "RET-015",
-      "reported_at": "2026-10-31T15:00:00+05:30",
+      "reported_at": "2026-11-22T15:00:00+05:30",
       "product_label": "Cooking oil 500 ml pouch",
       "request_count": 3
     }
@@ -32,13 +36,19 @@
     {
       "request_id": "REQ-SCN-009-003",
       "retailer_id": "RET-009",
-      "reported_at": "2026-11-01T14:00:00+05:30",
+      "reported_at": "2026-11-23T14:00:00+05:30",
       "product_label": "Cooking oil 500 ml pouch",
       "request_count": 2,
       "source_message_id": "DEMO-SCN-009-001"
     }
   ],
-  "unknowns": ["supplier_availability", "landed_cost", "regulatory_pack_review", "assortment_decision", "customer_willingness_to_pay"],
+  "unknowns": [
+    "supplier_availability",
+    "landed_cost",
+    "regulatory_pack_review",
+    "assortment_decision",
+    "customer_willingness_to_pay"
+  ],
   "expected": {
     "review_kind": "market_signal_review",
     "review_status": "pending_review",

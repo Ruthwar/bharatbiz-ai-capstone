@@ -4,7 +4,13 @@ import re
 
 from app.extraction.base import Extraction
 from app.extraction.retail_intents import reconcile_sender
-from app.extraction.rules import DAY_WORDS, find_named_row, match_catalogue_name, resolve_product
+from app.extraction.rules import (
+    DAY_WORDS,
+    UPLIFT_PATTERN,
+    find_named_row,
+    match_catalogue_name,
+    resolve_product,
+)
 from app.schemas.contracts import BusinessState, EvidenceFact, MessageSubmission
 
 SUPPLIER_PATTERN = re.compile(r"^SUP-\d{3}$")
@@ -137,6 +143,20 @@ def validate_extraction(
 ) -> list[str]:
     violations = []
     normalise_spans(extraction, message.text)
+    if extraction.fact("demand_uplift_percent") is None and any(
+        intent.intent == "demand_spike" for intent in extraction.intents
+    ):
+        uplift_match = UPLIFT_PATTERN.search(message.text)
+        if uplift_match:
+            extraction.facts.append(
+                EvidenceFact(
+                    field="demand_uplift_percent",
+                    value=uplift_match.group(1),
+                    evidence_span=uplift_match.group(1),
+                    span_start=uplift_match.start(1),
+                    span_end=uplift_match.end(1),
+                )
+            )
     violations.extend(apply_catalogue_authority(extraction, state))
     violations.extend(resolve_business_references(extraction, message.text, state))
     reconcile_sender(extraction, message)

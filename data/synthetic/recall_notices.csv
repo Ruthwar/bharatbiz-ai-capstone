@@ -1,0 +1,2 @@
+recall_id,batch_id,sku_id,supplier_id,reason,issued_on,authority,status,required_action,source_type
+RCL-001,BATCH-004,SKU-005,SUP-001,Supplier quality hold: pack label lot mismatch reported by the supplier,2026-11-22,Supplier quality team,open,quarantine_batch,synthetic

@@ -1,6 +1,6 @@
 """Routing vocabulary. Closed for handlers, open for understanding (see docs/INTAKE_DESIGN.md)."""
 
-TAXONOMY_VERSION = "0.1"
+TAXONOMY_VERSION = "0.2"
 
 INTENTS = (
     "baseline",
@@ -15,6 +15,12 @@ INTENTS = (
     "scheme_question",
     "competitor_observation",
     "combined_disruption",
+    "credit_check",
+    "scheme_claim",
+    "delivery_discrepancy",
+    "batch_recall",
+    "short_dated_stock",
+    "dispatch_planning",
     "other",
 )
 
@@ -30,4 +36,10 @@ ACTIONABLE_INTENTS = (
     "competitor_observation",
     "product_request",
     "combined_disruption",
+    "credit_check",
+    "scheme_claim",
+    "delivery_discrepancy",
+    "batch_recall",
+    "short_dated_stock",
+    "dispatch_planning",
 )

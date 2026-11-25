@@ -8,7 +8,7 @@ effective_from: 2026-06-01
 supersedes: POL-CSH-002 v2.3 (2026-01-15)
 owner: Finance Operations
 classification: synthetic
-parties: SUP-002, SUP-003, SUP-005
+parties: all
 skus: SKU-001, SKU-002, SKU-003, SKU-004, SKU-005, SKU-006, SKU-007, SKU-008, SKU-009, SKU-010, SKU-011, SKU-012
 licence: CC0-1.0 (synthetic text authored for this BharatBiz capstone)
 source_url: none
@@ -32,7 +32,7 @@ A fulfilment plan is only useful if the business can pay for it without breachin
 
 ## 3. Rules
 
-**R1 - Exclude, do not penalise.** A candidate whose headroom is negative is removed from the candidate set before ranking. It must not appear as a very expensive option that loses on cost, because the ranking rule in POL-DLY-001 would then be acting on a plan the business cannot execute.
+**R1 - Exclude, do not penalise.** A candidate whose headroom is negative is removed from the eligible set before recommendation. It must not be sent to the model as a viable option, because it is not a plan the business can review for selection. Eligible plans are compared under POL-DLY-001 and POL-DEC-008.
 
 **R2 - Stock-only is always affordable if there is stock.** The stock-only plan carries no procurement outflow and remains a candidate. If it leaves units unmet, the reviewer sees the shortage explicitly.
 
@@ -46,7 +46,7 @@ A fulfilment plan is only useful if the business can pay for it without breachin
 
 ## 4. Worked example
 
-If opening cash is ₹2,50,000 and a candidate plan costs ₹4,876.46, projected ending cash is ₹2,45,123.54 and headroom is ₹1,95,123.54, which clears the ₹50,000 buffer. The plan is a candidate. A plan costing ₹2,00,000 or more would project headroom at or below zero and would be excluded before ranking, even if it covered every unit exactly.
+If opening cash is ₹2,50,000 and a candidate plan costs ₹4,876.46, projected ending cash is ₹2,45,123.54 and headroom is ₹1,95,123.54, which clears the ₹50,000 buffer. The plan is eligible for review. A plan costing ₹2,00,000 or more would project headroom at or below zero and would be excluded before recommendation, even if it covered every unit exactly.
 
 ## 5. Known limitation
 

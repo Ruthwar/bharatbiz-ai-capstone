@@ -1,0 +1,36 @@
+{
+  "scenario_id": "SCN-013",
+  "name": "Batch recall and quality hold",
+  "description": "The supplier issues a quality hold for a biscuits batch. The system identifies the batch, the unreserved stock that could be quarantined and the open orders that depend on it.",
+  "message": {
+    "message_id": "DEMO-SCN-013-001",
+    "source_type": "supplier_update",
+    "text": "SUP-001 quality hold RCL-001 on batch BATCH-004 (SKU-005). Quarantine the batch and block new allocation.",
+    "observed_at": "2026-11-23T15:30:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v3-live-20261123",
+    "sender": {
+      "party_type": "supplier",
+      "party_id": "SUP-001",
+      "channel": "api"
+    }
+  },
+  "target_sku_id": "SKU-005",
+  "subject": {
+    "recall_id": "RCL-001",
+    "batch_id": "BATCH-004"
+  },
+  "unknowns": [
+    "quarantine_approval",
+    "customer_recall_scope"
+  ],
+  "expected": {
+    "review_kind": "recall_review",
+    "review_status": "pending_review",
+    "batch_id": "BATCH-004",
+    "free_to_quarantine_units": 110,
+    "affected_open_orders": 4,
+    "executes_quarantine": false
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "scenario_id": "SCN-010",
+  "name": "Overdue retailer with new order",
+  "description": "Sneha General Store already has past-due invoices and places a new tea order. The system shows exposure against the credit limit and holds it for a human credit decision.",
+  "message": {
+    "message_id": "DEMO-SCN-010-001",
+    "source_type": "retailer_message",
+    "text": "RET-016 here. I want to place a new order for 30 units of Tea 1 kg. Please check our credit limit before confirming.",
+    "observed_at": "2026-11-23T15:00:00+05:30",
+    "language": "English",
+    "consent_status": "synthetic",
+    "state_version": "synthetic-v3-live-20261123",
+    "sender": {
+      "party_type": "retailer",
+      "party_id": "RET-016",
+      "channel": "whatsapp"
+    }
+  },
+  "target_sku_id": "SKU-009",
+  "subject": {
+    "retailer_id": "RET-016",
+    "sku_id": "SKU-009",
+    "order_quantity_units": 30
+  },
+  "unknowns": [
+    "payment_date_for_overdue_invoices",
+    "credit_approval"
+  ],
+  "expected": {
+    "review_kind": "credit_review",
+    "review_status": "pending_review",
+    "credit_decision": "hold_limit_breach",
+    "overdue_total_rupees": "57448.23",
+    "order_value_rupees": "4620.00",
+    "exposure_rupees": "62068.23",
+    "credit_limit_rupees": "50000.00",
+    "executes_credit_decision": false
+  }
+}

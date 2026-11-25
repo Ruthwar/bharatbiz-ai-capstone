@@ -7,18 +7,18 @@ Two classes of document are mixed in one corpus and never blurred:
 - **Synthetic** (`classification: synthetic`) — written for this capstone. Fictional parties, fictional amounts, labelled `SIMULATION ONLY` in every file, licensed CC0-1.0.
 - **Public regulation** (`classification: public_regulation`) — real Government of India text, quoted in short excerpts with a source URL and retrieval date. Commentary around the quotes is this project's and is marked as such.
 
-## 1. Synthetic corpus (27 documents)
+## 1. Synthetic corpus (30 documents)
 
 | ID | Type | Title | Effective | Used for |
 | --- | --- | --- | --- | --- |
-| POL-DLY-001 | policy | Supplier Delay Handling Policy | 2026-04-01 | The ranking rule, the no-promise rule, the worked 102-unit example |
+| POL-DLY-001 | policy | Supplier Delay Handling Policy | 2026-10-15 | Shared eligibility rules and behavior for the selected deterministic or policy-grounded mode |
 | POL-CSH-002 | policy | Cash Buffer and Affordability Policy | 2026-06-01 | Why a plan is excluded before ranking, immediate-outflow treatment |
 | POL-SUB-003 | policy | Product Substitution and Equivalence Policy | 2026-07-15 | Pack-size change is substitution; no unit conversion |
 | POL-DAT-004 | policy | Evidence, Consent and Data Minimisation Policy | 2026-05-20 | Verbatim spans, offsets, retrieval supplies text not numbers |
 | POL-PRC-005 | policy | Price Validity and Re-approval Policy | 2026-08-01 | Approval binding, mid-delay re-quote gap |
 | POL-COM-006 | policy | Retailer and Supplier Communication Policy | 2026-03-10 | Template acknowledgements, no promises |
 | SOP-INT-001 | sop | Inbound Message Intake and Question SOP | 2026-09-01 | Identity gate, slots, two-question cap, forking |
-| SOP-REV-002 | sop | Human Review Queue SOP | 2026-09-15 | How a reviewer reads the card, approval conditions |
+| SOP-REV-002 | sop | Human Review Queue SOP | 2026-10-15 | Review of the selected mode, alternatives, abstention and human approval |
 | SOP-SHT-003 | sop | Partial Dispatch and Short Delivery SOP | 2026-10-01 | Why split delivery is escalated, not averaged |
 | SOP-STV-004 | sop | State Version and Refresh SOP | 2026-10-05 | Version pinning, mismatch handling, reset procedure |
 | TRM-SUP-002 | supplier_terms | Balaji Wholesale Distributors | 2026-04-15 | 2-day lead, 7-day payment, MOQ by SKU, 12-hour delay notice |
@@ -33,6 +33,9 @@ Two classes of document are mixed in one corpus and never blurred:
 | POL-LIQ-007 | policy | Liquidity and Cash-Flow Control Policy | 2026-11-15 | Cash headroom, immediate outflow and exclusion of breaches |
 | POL-RCM-007 | policy | Retailer Complaints and Resolution Policy | 2026-11-15 | Complaint evidence, triage and human-approved remedies |
 | POL-MSC-007 | policy | Market-Signal Corroboration Policy | 2026-11-15 | Independent corroboration and uncertainty labels |
+| POL-SVC-009 | policy | Retailer Service Continuity Policy | 2026-10-15 | Natural-language service priority based on verified order deadlines and recorded service tiers |
+| POL-CST-010 | policy | Procurement Cost Discipline Policy | 2026-10-15 | Natural-language preference for lower cost when verified service outcomes are materially similar |
+| POL-DEC-008 | policy | Policy-Grounded Operational Recommendation Policy | 2026-10-15 | Defines the UI mode choice and separate deterministic or RAG/LLM behavior over verified plans |
 | SOP-DEM-007 | sop | Demand Simulation SOP | 2026-11-15 | Reproducible scenario procedure and comparison outputs |
 | SOP-STK-007 | sop | Physical-Stock Reconciliation SOP | 2026-11-15 | Count, recount, adjustment and plan refresh procedure |
 | SOP-LIQ-007 | sop | Liquidity Monitoring and Approval SOP | 2026-11-15 | Deterministic liquidity calculation before review |
@@ -45,7 +48,10 @@ Consistency checks applied while writing:
 - The worked example uses the real fixture: 102 units requested, 56 usable, 46 bought, 12 delayed incoming units, horizon 2026-11-04.
 - The cash example uses the state's actual buffer of ₹50,000 and opening cash of ₹2,50,000.
 - Nothing in the policies grants the system an action the code does not take: no orders, no payments, no outbound messages.
-- The five new policy/SOP pairs are synthetic, effective 2026-11-15, carry CC0-1.0 synthetic licences and contain no source URLs or real-party claims.
+- The five policy/SOP pairs added on 2026-11-15 and three policy documents added for the decision-mode design are synthetic, carry CC0-1.0 synthetic licences and contain no source URLs or real-party claims.
+- POL-DLY-001 v3.2 is effective 2026-10-15. The reviewer selects either a fixed deterministic recommendation or a separate policy-grounded model recommendation; both use the same eligibility and verification gates.
+- POL-SVC-009 and POL-CST-010 provide competing service and procurement-cost priorities. Neither overrides the mandatory eligibility rules; POL-DEC-008 describes how an advisory model explains the trade-off.
+- The application exposes deterministic and policy-grounded LLM recommendation modes. The LLM mode retrieves policy passages before choosing among verified candidate plans; it abstains if retrieval, configuration, or response validation fails.
 
 ## 2. Regulatory extracts (3 documents)
 

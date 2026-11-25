@@ -1,0 +1,3 @@
+evidence_id,delivery_id,purchase_order_id,retailer_id,sku_id,ordered_units,received_units,damaged_units,wrong_item_units,unit,invoice_reference,pod_reference,checked_on,status,source_type
+EVD-9001,DEL-9001,PO-9001,RET-004,SKU-003,60,52,5,3,litre,INV-9001,POD-9001,2026-11-22,discrepancy_open,synthetic
+EVD-9002,DEL-9002,PO-9002,RET-010,SKU-005,48,48,0,0,pieces,INV-9002,POD-9002,2026-11-20,matched,synthetic

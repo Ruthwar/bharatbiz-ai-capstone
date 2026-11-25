@@ -192,6 +192,25 @@ def apply_theme() -> None:
             color: #334155; background: #f8fafc; border-left: 3px solid #94a3b8;
             padding: 0.75rem 0.9rem; border-radius: 0 7px 7px 0; line-height: 1.55; margin: 0.65rem 0;
         }
+        .bb-summary {
+            background: #ffffff; border: 1px solid var(--bb-line); border-left: 4px solid var(--bb-success);
+            border-radius: 10px; padding: 1rem 1.1rem; line-height: 1.6; color: #334155; font-size: 0.94rem;
+        }
+        .bb-steps { display: flex; flex-direction: column; margin-top: 0.35rem; }
+        .bb-step { display: flex; gap: 0.85rem; padding: 0.9rem 0; border-bottom: 1px solid #edf1f6; }
+        .bb-step:last-child { border-bottom: 0; padding-bottom: 0.2rem; }
+        .bb-step-marker {
+            width: 26px; height: 26px; border-radius: 999px; background: #eef2ff; color: #3730a3;
+            display: flex; align-items: center; justify-content: center; font-size: 0.74rem;
+            font-weight: 750; flex-shrink: 0;
+        }
+        .bb-step-done .bb-step-marker { background: #ecfdf5; color: #047857; }
+        .bb-step-waiting .bb-step-marker { background: #fffbeb; color: #b45309; }
+        .bb-step-blocked .bb-step-marker { background: #fef2f2; color: #b91c1c; }
+        .bb-step-title { font-weight: 680; font-size: 0.9rem; color: var(--bb-ink); }
+        .bb-step-detail { color: #475569; font-size: 0.83rem; line-height: 1.55; margin-top: 0.2rem; }
+        .bb-substeps { margin: 0.45rem 0 0; padding-left: 1.05rem; color: #475569; font-size: 0.8rem; line-height: 1.6; }
+        .bb-substeps li { margin-bottom: 0.2rem; }
         .bb-list { margin: 0; padding: 0; list-style: none; }
         .bb-list li { padding: 0.7rem 0; border-bottom: 1px solid #edf1f6; line-height: 1.45; }
         .bb-list li:last-child { border-bottom: 0; }

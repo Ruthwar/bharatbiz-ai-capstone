@@ -25,6 +25,7 @@ class ChatInbound(BaseModel):
     message_id: str | None = None
     state_version: str | None = None
     consent_status: Literal["synthetic", "authorized", "not_applicable"] = "synthetic"
+    decision_mode: Literal["deterministic", "policy_grounded_llm"] = "deterministic"
 
 
 def to_submission(payload: ChatInbound, state_version: str) -> MessageSubmission:

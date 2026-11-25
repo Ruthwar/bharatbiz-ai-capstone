@@ -7,11 +7,14 @@
     "message_id": "DEMO-SCN-005-001",
     "source_type": "synthetic",
     "text": "Stock discrepancy for Biscuits small carton: physical count is 48 pieces against book stock of 63 pieces.",
-    "observed_at": "2026-11-01T10:00:00+05:30",
+    "observed_at": "2026-11-23T10:00:00+05:30",
     "language": "English",
     "consent_status": "synthetic",
-    "state_version": "synthetic-v2-seed-20261105",
-    "sender": {"party_type": "sales_rep", "channel": "api"}
+    "state_version": "synthetic-v3-live-20261123",
+    "sender": {
+      "party_type": "sales_rep",
+      "channel": "api"
+    }
   },
   "overlays": {
     "physical_count_delta": -15
@@ -21,7 +24,10 @@
     "reported_physical_count_units": 48,
     "physical_count_status": "unverified"
   },
-  "unknowns": ["reconciled_physical_count", "stock_discrepancy_root_cause"],
+  "unknowns": [
+    "reconciled_physical_count",
+    "stock_discrepancy_root_cause"
+  ],
   "expected": {
     "review_status": "pending_review",
     "selected_candidate_id": "supplier-SUP-001",

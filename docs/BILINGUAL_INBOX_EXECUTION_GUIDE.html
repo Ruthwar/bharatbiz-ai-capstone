@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BharatBiz AI — Bilingual Inbox Execution Guide</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #eef2f7; color: #202a38; font-family: "Segoe UI", Arial, sans-serif; font-size: 14px; line-height: 1.42; }
+    .book { max-width: 980px; margin: 0 auto; background: #ffffff; box-shadow: 0 0 28px #14243d18; }
+    section { padding: 38px 48px; }
+    h1, h2, h3, h4 { color: #14243d; line-height: 1.2; }
+    h1 { font-size: 38px; margin: 12px 0 18px; }
+    h2 { font-size: 24px; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 3px solid #2457d6; }
+    h3 { font-size: 17px; margin: 18px 0 7px; }
+    h4 { font-size: 14px; margin: 12px 0 5px; }
+    p { margin: 6px 0 10px; }
+    ol, ul { margin: 7px 0 12px; padding-left: 23px; }
+    li { margin: 4px 0; }
+    code { font-family: Consolas, "Courier New", monospace; font-size: 0.94em; background: #f0f3f7; padding: 1px 4px; border-radius: 3px; }
+    .cover { background: #14243d; color: #ffffff; min-height: 88vh; }
+    .cover h1, .cover h2 { color: #ffffff; border: 0; }
+    .cover .subtitle { color: #dce8ff; font-size: 20px; max-width: 740px; }
+    .eyebrow { color: #2457d6; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; font-size: 11px; }
+    .cover .eyebrow { color: #a9c7ff; }
+    .meta { color: #5d6978; font-size: 12px; }
+    .cover .meta { color: #cfddf5; margin-top: 44px; }
+    .banner { margin: 18px 0; padding: 18px; border: 1px solid #ffffff45; border-radius: 10px; background: #ffffff10; font-size: 17px; }
+    .note, .warning, .success, .expected { margin: 10px 0; padding: 10px 12px; border-left: 4px solid #2457d6; background: #edf3ff; border-radius: 0 7px 7px 0; }
+    .warning { border-left-color: #9a5b00; background: #fff6df; }
+    .success, .expected { border-left-color: #0d7c72; background: #eaf8f5; }
+    .example { margin: 14px 0; padding: 13px 15px; border: 1px solid #d9e0ea; border-radius: 9px; break-inside: avoid; }
+    .example h3 { margin-top: 0; }
+    .setup { color: #35445a; background: #f5f7fa; padding: 8px 10px; border-radius: 6px; font-size: 12px; }
+    .message { margin: 6px 0 9px; padding: 8px 10px; background: #f5f7fa; border: 1px solid #e2e7ee; border-radius: 6px; font-family: Consolas, "Courier New", monospace; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+    .label { color: #2457d6; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .question { color: #14243d; font-weight: 700; }
+    .small { font-size: 12px; }
+    .muted { color: #5d6978; }
+    .checklist { list-style: none; padding-left: 0; }
+    .checklist li { padding-left: 4px; }
+    .scenario-page { break-before: page; }
+    .footer-note { margin-top: 24px; padding-top: 10px; border-top: 1px solid #d9e0ea; color: #5d6978; font-size: 11px; }
+    @media print {
+      @page { size: A4; margin: 13mm 12mm 15mm; }
+      body { background: #ffffff; font-size: 9.5pt; line-height: 1.33; }
+      .book { max-width: none; box-shadow: none; }
+      section { padding: 0; }
+      .cover { min-height: 250mm; margin: -13mm -12mm -15mm; padding: 28mm 18mm 22mm; break-after: page; }
+      .cover h1 { font-size: 32pt; }
+      .cover .subtitle { font-size: 16pt; }
+      h2 { font-size: 18pt; }
+      h3 { font-size: 12.5pt; margin-top: 12px; }
+      h4 { font-size: 10pt; }
+      p { margin: 4px 0 7px; }
+      ol, ul { margin: 5px 0 8px; }
+      .example { margin: 9px 0; padding: 9px 11px; }
+      .message { margin: 4px 0 6px; padding: 6px 8px; font-size: 8.4pt; }
+      .note, .warning, .success, .expected { margin: 7px 0; padding: 7px 9px; }
+      .setup { padding: 6px 8px; font-size: 8.2pt; }
+      .small { font-size: 8.5pt; }
+      .example, .message, .note, .warning, .expected, .setup { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+<div class="book">
+  <section id="cover" class="cover">
+    <div class="eyebrow">Personal execution reference · Synthetic capstone demo</div>
+    <h1>BharatBiz AI<br>Bilingual Inbox Examples</h1>
+    <p class="subtitle">18 ready-to-paste message sets covering SCN-001 through SCN-009, with English and Hinglish wording, sender details, conversation IDs, clarification replies and expected outcomes.</p>
+    <div class="banner"><strong>Core rule:</strong><br>English and Hinglish are alternatives. Send one language version, not both. Use the same Conversation ID only for clarification replies belonging to that same intake.</div>
+    <p class="meta">Prepared for Ruthwar · 19 November 2026<br>Based on the current synthetic open orders, supplier offers, inventory, retailer directory and market-signal workflows.</p>
+  </section>
+
+  <section id="quick-start">
+    <div class="eyebrow">Read before executing</div>
+    <h2>Quick start and current limitations</h2>
+    <h3>Six steps for every example</h3>
+    <ol>
+      <li>Select the specified <strong>Sender</strong> and <strong>Language</strong>.</li>
+      <li>Enter the suggested <strong>Conversation ID</strong>.</li>
+      <li>Paste either the English or Hinglish message.</li>
+      <li>Click <strong>Send for processing</strong>.</li>
+      <li>For a clarification reply, retain the <strong>same sender and Conversation ID</strong>.</li>
+      <li>For an independent example or independent market report, use a <strong>new Conversation ID</strong>.</li>
+    </ol>
+    <div class="note"><strong>Editable intake versus full scenario:</strong> Send for processing handles only the visible message and persistent intake history. Run full scenario applies the fixture's explicit demand, supplier, cash, stock, history and observation overlays.</div>
+    <div class="warning"><strong>Verified LLM extraction limitation:</strong> Current LLM mode can omit demand percentage, physical count and complaint order reference. Multi-turn SCN-002, SCN-005 and SCN-006 can therefore repeat the same question until human triage. The documented sequences complete through the deterministic rules path.</div>
+    <div class="warning"><strong>Fixture-only behaviour:</strong> Plain intake does not turn SCN-004 payment wording into a cash-receipt overlay. SCN-008 requires an explicit combined-disruption fixture and routes editable intake to human triage. Use Run full scenario for their canonical operational outcomes.</div>
+    <h3>Execution checklist</h3>
+    <ul class="checklist">
+      <li>[ ] Demo reset completed if a clean run is required.</li>
+      <li>[ ] Correct sender selected; supplier/retailer identity must match the message.</li>
+      <li>[ ] Exact product and pack wording retained.</li>
+      <li>[ ] New Conversation ID used for each independent example.</li>
+      <li>[ ] Same Conversation ID used only for unfinished clarification flows.</li>
+      <li>[ ] Expected route and result checked; no operational action is executed automatically.</li>
+    </ul>
+  </section>
+
+  <section id="scn001" class="scenario-page">
+    <div class="eyebrow">Scenario 01 · Normal day</div>
+    <h2>SCN-001 — Normal day</h2>
+    <p class="small">[ ] Sender selected &nbsp; [ ] Language selected &nbsp; [ ] Conversation ID checked &nbsp; [ ] Result reviewed</p>
+    <div class="example">
+      <h3>Example 1A — Biscuits on a normal day</h3>
+      <div class="setup"><strong>Sender:</strong> Sales rep, no reporter ID<br><strong>Conversation ID:</strong> <code>manual-scn001-a</code></div>
+      <h4>English</h4><div class="message">Normal day planning for Biscuits family carton.</div>
+      <h4>Hinglish</h4><div class="message">Normal day planning for Biscuits family carton karo.</div>
+      <div class="expected"><strong>Expected:</strong> Normal-day planning uses the four matching open orders. Stock-only plan; <strong>70/70 pieces fulfilled</strong>.</div>
+      <p class="small"><strong>Follow-up:</strong> None required.</p>
+    </div>
+    <div class="example">
+      <h3>Example 1B — Rice on a normal day</h3>
+      <div class="setup"><strong>Sender:</strong> Sales rep, no reporter ID<br><strong>Conversation ID:</strong> <code>manual-scn001-b</code></div>
+      <h4>English</h4><div class="message">Normal day planning for Rice 10 kg bag.</div>
+      <h4>Hinglish</h4><div class="message">Normal day planning for Rice 10 kg bag karo.</div>
+      <div class="expected"><strong>Expected:</strong> Uses <code>ORD-0002</code> for 20 kg and <code>ORD-0011</code> for 15 kg. Stock-only plan; <strong>35/35 kg fulfilled</strong>.</div>
+      <p class="small"><strong>Follow-up:</strong> None required.</p>
+    </div>
+  </section>
+
+  <section id="scn002" class="scenario-page">
+    <div class="eyebrow">Scenario 02 · Demand simulation</div>
+    <h2>SCN-002 — Demand spike</h2>
+    <p class="small">[ ] Sender selected &nbsp; [ ] Language selected &nbsp; [ ] Conversation ID checked &nbsp; [ ] Result reviewed</p>
+    <div class="example">
+      <h3>Example 2A — Complete biscuit demand spike</h3>
+      <div class="setup"><strong>Sender:</strong> Sales rep, no reporter ID<br><strong>Conversation ID:</strong> <code>manual-scn002-a</code></div>
+      <h4>English</h4><div class="message">Demand spike: open orders for Biscuits small carton are expected to rise by 60 percent.</div>
+      <h4>Hinglish</h4><div class="message">Demand spike: Biscuits small carton ke open orders rise by 60 percent hone ki expectation hai.</div>
+      <div class="expected"><strong>Expected:</strong> Demand is rounded upward per order line. The plan becomes <strong>112 units</strong>, with <strong>SUP-001 procuring 47 pieces</strong> and zero unmet demand.</div>
+    </div>
+    <div class="example">
+      <h3>Example 2B — Multi-turn demand spike</h3>
+      <div class="setup"><strong>Sender:</strong> Sales rep, no reporter ID<br><strong>Conversation ID:</strong> <code>manual-scn002-b</code> for both steps</div>
+      <h4>Step 1 — English</h4><div class="message">Demand spike for Rice 10 kg bag.</div>
+      <h4>Step 1 — Hinglish</h4><div class="message">Rice 10 kg bag ke liye Demand spike hai.</div>
+      <p class="question">Expected question</p>
+      <p class="small">English: “What demand uplift percentage should be simulated?”<br>Hinglish: “Demand uplift kitne percent simulate karna hai?”</p>
+      <h4>Step 2 — English reply</h4><div class="message">Open orders are expected to rise by 40 percent.</div>
+      <h4>Step 2 — Hinglish reply</h4><div class="message">Open orders rise by 40 percent hone ki expectation hai.</div>
+      <div class="expected"><strong>Expected:</strong> Original demand of 35 kg becomes <strong>49 kg</strong> after per-line rounding. Available stock fulfils <strong>49/49 kg</strong>.</div>
+    </div>
+    <div class="warning small"><strong>Current LLM caveat:</strong> The percentage may not be extracted, causing the question to repeat. The deterministic rules path completes this sequence.</div>
+  </section>
+
+  <section id="scn003" class="scenario-page">
+    <div class="eyebrow">Scenario 03 · Supplier disruption</div>
+    <h2>SCN-003 — Supplier delay</h2>
+    <p class="small">[ ] Sender selected &nbsp; [ ] Language selected &nbsp; [ ] Conversation ID checked &nbsp; [ ] Result reviewed</p>
+    <div class="example">
+      <h3>Example 3A — Complete SUP-005 delay</h3>
+      <div class="setup"><strong>Sender:</strong> Supplier <code>SUP-005</code><br><strong>Conversation ID:</strong> <code>manual-scn003-a</code></div>
+      <h4>English</h4><div class="message">Supplier SUP-005 reports a two-day delay for Cooking oil 1 L pouch; revised date is not confirmed.</div>
+      <h4>Hinglish</h4><div class="message">Supplier SUP-005 ke Cooking oil 1 L pouch ki delivery mein two-day delay hai; revised date confirmed nahi hai.</div>
+      <div class="expected"><strong>Expected:</strong> Twelve incoming units are treated as delayed; no revised date is invented. <strong>SUP-002</strong> is recommended, fulfilling <strong>102/102 litres</strong>, with <strong>28 late</strong>, zero unmet and cost <strong>₹4,876.46</strong>.</div>
+    </div>
+    <div class="example">
+      <h3>Example 3B — Multi-turn SUP-004 delay</h3>
+      <div class="setup"><strong>Sender:</strong> Supplier <code>SUP-004</code><br><strong>Conversation ID:</strong> <code>manual-scn003-b</code> for all three steps</div>
+      <h4>Step 1 — English</h4><div class="message">SUP-004 reports that delivery is late.</div>
+      <h4>Step 1 — Hinglish</h4><div class="message">SUP-004 ki delivery late hai.</div>
+      <p class="question">Expected question</p><p class="small">English: “Which product and pack is affected?”<br>Hinglish: “Kaunsa product aur pack affected hai?”</p>
+      <h4>Step 2 — English and Hinglish reply</h4><div class="message">Cooking oil 5 L tin.</div>
+      <p class="question">Next expected question</p><p class="small">English: “How many days is the delay?”<br>Hinglish: “Delay kitne din ka hai?”</p>
+      <h4>Step 3 — English</h4><div class="message">2-day delay.</div>
+      <h4>Step 3 — Hinglish</h4><div class="message">2-day delay hai.</div>
+      <div class="expected"><strong>Expected:</strong> Nineteen incoming units are assumed delayed and alternatives are compared. The deterministic result selects <strong>SUP-005</strong>, fulfilling <strong>89/89 litres</strong>.</div>
+    </div>
+  </section>
+
+  <section id="scn004" class="scenario-page">
+    <div class="eyebrow">Scenario 04 · Liquidity stress</div>
+    <h2>SCN-004 — Limited cash and delayed payment</h2>
+    <p class="small">[ ] Sender selected &nbsp; [ ] Language selected &nbsp; [ ] Conversation ID checked &nbsp; [ ] Result reviewed</p>
+    <div class="example">
+      <h3>Example 4A — Canonical delayed payment message</h3>
+      <div class="setup"><strong>Sender:</strong> Sales rep, no reporter ID<br><strong>Conversation ID:</strong> <code>manual-scn004-a</code></div>
+      <h4>English</h4><div class="message">Limited cash for Cooking oil 1 L pouch: RET-003 payment of 30000 rupees expected today is now delayed until 2026-11-08.</div>
+      <h4>Hinglish</h4><div class="message">Limited cash for Cooking oil 1 L pouch: RET-003 ka 30000 rupees payment aaj expected tha, ab 2026-11-08 tak delayed hai.</div>
+    </div>
+    <div class="example">
+      <h3>Example 4B — Different retailer and product</h3>
+      <div class="setup"><strong>Sender:</strong> Sales rep, no reporter ID<br><strong>Conversation ID:</strong> <code>manual-scn004-b</code></div>
+      <h4>English</h4><div class="message">Limited cash for Cooking oil 5 L tin: RET-010 payment of 30197.68 rupees due on 2026-11-08 is now delayed until 2026-11-12.</div>
+      <h4>Hinglish</h4><div class="message">Limited cash for Cooking oil 5 L tin: RET-010 ka 30197.68 rupees payment 2026-11-08 ko due tha, ab 2026-11-12 tak delayed hai.</div>
+    </div>
+    <div class="warning"><strong>Expected in editable Inbox:</strong> Both messages are classified as <code>limited_cash</code>, but plain intake produces a normal base-cash plan. It does not convert payment wording into a receipt overlay. No follow-up is required.</div>
+    <div class="expected"><strong>Canonical result:</strong> Run full SCN-004 for <strong>68/102 litres fulfilled and 34 unmet</strong>, plus the on-time-receipt counterfactual selecting SUP-005. Example 4B is an intake-classification variant; no custom cash fixture exists for it.</div>
+  </section>
+
+  <section id="scn005" class="scenario-page">
+    <div class="eyebrow">Scenario 05 · Inventory reconciliation</div>
+    <h2>SCN-005 — Stock discrepancy</h2>
+    <p class="small">[ ] Sender selected &nbsp; [ ] Language selected &nbsp; [ ] Conversation ID checked &nbsp; [ ] Result reviewed</p>
+    <div class="example">
+      <h3>Example 5A — Complete biscuit stock discrepancy</h3>
+      <div class="setup"><strong>Sender:</strong> Sales rep, no reporter ID<br><strong>Conversation ID:</strong> <code>manual-scn005-a</code></div>
+      <h4>English</h4><div class="message">Stock discrepancy for Biscuits small carton: physical count is 48 pieces against book stock of 63 pieces.</div>
+      <h4>Hinglish</h4><div class="message">Stock discrepancy for Biscuits small carton: physical count is 48 pieces, book stock 63 pieces hai.</div>
+      <div class="expected"><strong>Expected:</strong> Book stock <strong>63</strong> remains beside unverified physical count <strong>48</strong>. The plan procures <strong>19 pieces from SUP-001</strong>, fulfils <strong>69/69</strong>, and leaves zero unmet.</div>
+    </div>
+    <div class="example">
+      <h3>Example 5B — Multi-turn rice stock discrepancy</h3>
+      <div class="setup"><strong>Sender:</strong> Sales rep, no reporter ID<br><strong>Conversation ID:</strong> <code>manual-scn005-b</code> for both steps</div>
+      <h4>Step 1 — English</h4><div class="message">Stock discrepancy for Rice 10 kg bag.</div>
+      <h4>Step 1 — Hinglish</h4><div class="message">Rice 10 kg bag mein Stock discrepancy hai.</div>
+      <p class="question">Expected question</p><p class="small">English: “What is the reported physical count in base units?”<br>Hinglish: “Reported physical count base units mein kitna hai?”</p>
+      <h4>Step 2 — English</h4><div class="message">Physical count is 100 kg.</div>
+      <h4>Step 2 — Hinglish</h4><div class="message">Physical count is 100 units.</div>
+      <div class="expected"><strong>Expected:</strong> Book stock <strong>119 kg</strong> remains separate from reported physical stock <strong>100 kg</strong>. The base-demand plan fulfils <strong>35/35 kg</strong> from stock.</div>
+    </div>
+    <div class="warning small"><strong>Current LLM caveat:</strong> The physical count may not be extracted, causing the question to repeat. The deterministic rules path completes this sequence.</div>
+  </section>
+
+  <section id="scn006" class="scenario-page">
+    <div class="eyebrow">Scenario 06 · Retailer case management</div>
+    <h2>SCN-006 — Retailer delivery complaint</h2>
+    <p class="small">These examples use retailer/product combinations with two real open orders, forcing order-reference clarification.</p>
+    <div class="example">
+      <h3>Example 6A — RET-019 cooking-oil complaint</h3>
+      <div class="setup"><strong>Sender:</strong> Retailer <code>RET-019</code><br><strong>Conversation ID:</strong> <code>manual-scn006-a</code> for both steps</div>
+      <h4>Step 1 — English</h4><div class="message">My Cooking oil 1 L pouch delivery is late. Please check it.</div>
+      <h4>Step 1 — Hinglish</h4><div class="message">Meri Cooking oil 1 L pouch delivery late hai. Please check karo.</div>
+      <p class="question">Expected question</p><div class="message">Which order reference is this complaint about? Matching orders: ORD-0006, ORD-0019</div>
+      <p class="small"><code>ORD-0006</code>: 21 litres, requested for 2026-11-03.<br><code>ORD-0019</code>: 10 litres, requested for 2026-11-02.</p>
+      <h4>Step 2 — English</h4><div class="message">The complaint is about ORD-0019.</div>
+      <h4>Step 2 — Hinglish</h4><div class="message">Complaint ORD-0019 ke baare mein hai.</div>
+      <div class="expected"><strong>Expected:</strong> Case review for <code>ORD-0019</code>; no allocation plan and no automatic refund, replacement or outbound response.</div>
+    </div>
+    <div class="example">
+      <h3>Example 6B — RET-018 biscuit complaint</h3>
+      <div class="setup"><strong>Sender:</strong> Retailer <code>RET-018</code><br><strong>Conversation ID:</strong> <code>manual-scn006-b</code> for both steps</div>
+      <h4>Step 1 — English</h4><div class="message">My Biscuits small carton delivery is late. Please check it.</div>
+      <h4>Step 1 — Hinglish</h4><div class="message">Meri Biscuits small carton delivery late hai. Please check karo.</div>
+      <p class="question">Expected question</p><div class="message">Which order reference is this complaint about? Matching orders: ORD-0007, ORD-0030</div>
+      <p class="small"><code>ORD-0007</code>: 3 pieces, requested for 2026-11-02.<br><code>ORD-0030</code>: 23 pieces, requested for 2026-11-04.</p>
+      <h4>Step 2 — English</h4><div class="message">The complaint is about ORD-0030.</div>
+      <h4>Step 2 — Hinglish</h4><div class="message">Complaint ORD-0030 ke baare mein hai.</div>
+      <div class="expected"><strong>Expected:</strong> Case review for <code>ORD-0030</code>, not an inventory allocation plan.</div>
+    </div>
+    <div class="warning small"><strong>Current LLM caveat:</strong> The order-reference reply may be extracted as a purchase-order reference instead, leaving clarification unresolved. The deterministic rules path completes both sequences.</div>
+  </section>
+
+  <section id="scn007" class="scenario-page">
+    <div class="eyebrow">Scenario 07 · Market intelligence</div>
+    <h2>SCN-007 — Competitor observation</h2>
+    <p class="small">[ ] Sender selected &nbsp; [ ] Language selected &nbsp; [ ] Conversation ID checked &nbsp; [ ] Result reviewed</p>
+    <div class="example">
+      <h3>Example 7A — Rice promotion</h3>
+      <div class="setup"><strong>Sender:</strong> Sales rep <code>REP-017</code><br><strong>Conversation ID:</strong> <code>manual-scn007-a</code></div>
+      <h4>English</h4><div class="message">Competitor ValueMart is offering 20 percent off Rice 5 kg bag at a nearby shop in Kukatpally.</div>
+      <h4>Hinglish</h4><div class="message">Competitor ValueMart Kukatpally ke nearby shop mein Rice 5 kg bag par 20 percent off offer kar raha hai.</div>
+      <div class="expected"><strong>Expected:</strong> One unique observation from one reporter, labelled <strong>single-reporter unverified</strong>. No pricing, procurement or allocation action.</div>
+    </div>
+    <div class="example">
+      <h3>Example 7B — Tea promotion</h3>
+      <div class="setup"><strong>Sender:</strong> Sales rep <code>REP-017</code><br><strong>Conversation ID:</strong> <code>manual-scn007-b</code></div>
+      <h4>English</h4><div class="message">Competitor ValueMart is offering 15 percent off Tea 1 kg pack at a nearby shop in Secunderabad.</div>
+      <h4>Hinglish</h4><div class="message">Competitor ValueMart Secunderabad ke nearby shop mein Tea 1 kg pack par 15 percent off offer kar raha hai.</div>
+      <div class="expected"><strong>Expected:</strong> A separate single-reporter, unverified market signal.</div>
+    </div>
+    <div class="note"><strong>Follow-up:</strong> No clarification question is required. To demonstrate two reports from two distinct reporters and corroborated-unverified status, use Run full scenario for SCN-007; the current manual sender picker does not provide <code>REP-018</code>.</div>
+  </section>
+
+  <section id="scn008" class="scenario-page">
+    <div class="eyebrow">Scenario 08 · Multiple simultaneous constraints</div>
+    <h2>SCN-008 — Combined disruption</h2>
+    <p class="small">[ ] Sender selected &nbsp; [ ] Language selected &nbsp; [ ] Conversation ID checked &nbsp; [ ] Result reviewed</p>
+    <div class="example">
+      <h3>Example 8A — Canonical combined message</h3>
+      <div class="setup"><strong>Sender:</strong> Sales rep, no reporter ID<br><strong>Conversation ID:</strong> <code>manual-scn008-a</code></div>
+      <h4>English</h4><div class="message">Combined disruption for Cooking oil 1 L pouch: demand up 60 percent, SUP-005 delayed two days, and RET-003 payment of 30000 rupees delayed until 2026-11-08.</div>
+      <h4>Hinglish</h4><div class="message">Combined disruption for Cooking oil 1 L pouch: demand up 60 percent, SUP-005 two-day delay, aur RET-003 ka 30000 rupees payment 2026-11-08 tak delayed hai.</div>
+    </div>
+    <div class="example">
+      <h3>Example 8B — Alternative combined message</h3>
+      <div class="setup"><strong>Sender:</strong> Sales rep, no reporter ID<br><strong>Conversation ID:</strong> <code>manual-scn008-b</code></div>
+      <h4>English</h4><div class="message">Combined disruption for Rice 10 kg bag: demand up 40 percent, SUP-005 reports a two-day delay, and RET-010 payment of 30197.68 rupees is delayed until 2026-11-12.</div>
+      <h4>Hinglish</h4><div class="message">Combined disruption for Rice 10 kg bag: demand up 40 percent, SUP-005 two-day delay, aur RET-010 ka 30197.68 rupees payment 2026-11-12 tak delayed hai.</div>
+    </div>
+    <div class="warning"><strong>Expected in editable Inbox:</strong> Both are classified as <code>combined_disruption</code> and routed to <strong>human triage without a plan</strong>. Clarification questions are intentionally disabled because the overlays cannot safely be inferred from free text.</div>
+    <div class="expected"><strong>Canonical result:</strong> Run full SCN-008 using Example 8A's conditions for <strong>56/166 litres fulfilled and 110 unmet</strong>, with an on-time-receipt counterfactual selecting SUP-005. Example 8B is only a classification/triage variant.</div>
+  </section>
+
+  <section id="scn009" class="scenario-page">
+    <div class="eyebrow">Scenario 09 · Pack-size demand signal</div>
+    <h2>SCN-009 — Smaller-pack request</h2>
+    <p class="small">Independent retailer reports require separate senders and separate Conversation IDs.</p>
+    <div class="example">
+      <h3>Example 9A — Cooking-oil 500 ml aggregation</h3>
+      <div class="setup"><strong>First sender:</strong> Retailer <code>RET-009</code><br><strong>First Conversation ID:</strong> <code>manual-scn009-a1</code></div>
+      <h4>English</h4><div class="message">Customers are requesting Cooking oil 500 ml pouch. Can you supply this smaller pack?</div>
+      <h4>Hinglish</h4><div class="message">Customers Cooking oil 500 ml pouch request kar rahe hain. Kya aap yeh smaller pack supply kar sakte hain?</div>
+      <div class="expected"><strong>Expected first result:</strong> One reported request from one retailer, no catalogue match and no assortment change.</div>
+      <div class="setup"><strong>Second independent report:</strong> Retailer <code>RET-006</code><br><strong>New Conversation ID:</strong> <code>manual-scn009-a2</code><br><strong>Message:</strong> Repeat the same English or Hinglish text.</div>
+      <div class="expected"><strong>Expected after second report:</strong> <strong>Two reported requests from two retailers</strong>, still unverified, with no catalogue match or automatic assortment change.</div>
+    </div>
+    <div class="example">
+      <h3>Example 9B — Rice 2 kg request</h3>
+      <div class="setup"><strong>First sender:</strong> Retailer <code>RET-015</code><br><strong>First Conversation ID:</strong> <code>manual-scn009-b1</code></div>
+      <h4>English</h4><div class="message">Customers are requesting Rice 2 kg bag. Can you supply this smaller pack?</div>
+      <h4>Hinglish</h4><div class="message">Customers Rice 2 kg bag request kar rahe hain. Kya aap yeh smaller pack supply kar sakte hain?</div>
+      <div class="expected"><strong>Expected first result:</strong> One reported request from one retailer; no existing catalogue pack match.</div>
+      <div class="setup"><strong>Optional second report:</strong> Retailer <code>RET-002</code><br><strong>New Conversation ID:</strong> <code>manual-scn009-b2</code><br><strong>Message:</strong> Repeat the same Rice 2 kg request.</div>
+      <div class="expected"><strong>Expected after second report:</strong> Two reported requests from two retailers. Supplier availability, landed cost and willingness to pay remain unknown.</div>
+    </div>
+    <div class="note"><strong>Canonical aggregate:</strong> Run full SCN-009 for <strong>nine reported requests from three retailers</strong>. Plain Inbox counts each manually submitted report individually.</div>
+    <p class="footer-note">End of execution guide · All examples use synthetic academic capstone data. Recommendations remain subject to human review; no purchase, payment, pricing, assortment or outbound-message action is executed automatically.</p>
+  </section>
+</div>
+</body>
+</html>

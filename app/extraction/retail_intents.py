@@ -6,6 +6,12 @@ from app.schemas.contracts import IntentMatch, MessageSubmission
 RETAIL_SOURCES = {"retailer_message", "sales_visit"}
 TIERS = {
     "combined_disruption": 1.0,
+    "batch_recall": 0.995,
+    "delivery_discrepancy": 0.99,
+    "credit_check": 0.985,
+    "scheme_claim": 0.98,
+    "short_dated_stock": 0.975,
+    "dispatch_planning": 0.97,
     "limited_cash": 0.99,
     "stock_discrepancy": 0.98,
     "demand_spike": 0.97,

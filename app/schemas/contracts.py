@@ -44,6 +44,7 @@ class InboundResult(BaseModel):
     question: str | None = None
     recommendation: dict | None = None
     mode: str = "rules_mock"
+    decision_mode: Literal["deterministic", "policy_grounded_llm"] = "deterministic"
     rounds: int = 0
     duplicate: bool = False
     processing_error: str | None = None

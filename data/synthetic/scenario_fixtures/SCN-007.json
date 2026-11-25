@@ -6,17 +6,21 @@
     "message_id": "DEMO-SCN-007-001",
     "source_type": "synthetic",
     "text": "Competitor ValueMart is offering 20 percent off Rice 5 kg bag at a nearby shop in Kukatpally.",
-    "observed_at": "2026-11-01T12:00:00+05:30",
+    "observed_at": "2026-11-23T12:00:00+05:30",
     "language": "English",
     "consent_status": "synthetic",
-    "state_version": "synthetic-v2-seed-20261105",
-    "sender": {"party_type": "sales_rep", "party_id": "REP-017", "channel": "api"}
+    "state_version": "synthetic-v3-live-20261123",
+    "sender": {
+      "party_type": "sales_rep",
+      "party_id": "REP-017",
+      "channel": "api"
+    }
   },
   "observations": [
     {
       "observation_id": "OBS-SCN-007-001",
       "reporter_id": "REP-017",
-      "reported_at": "2026-11-01T12:00:00+05:30",
+      "reported_at": "2026-11-23T12:00:00+05:30",
       "competitor_name": "ValueMart",
       "product_label": "Rice 5 kg bag",
       "offer": "20 percent off",
@@ -26,7 +30,7 @@
     {
       "observation_id": "OBS-SCN-007-002",
       "reporter_id": "REP-017",
-      "reported_at": "2026-11-01T12:05:00+05:30",
+      "reported_at": "2026-11-23T12:05:00+05:30",
       "competitor_name": "ValueMart",
       "product_label": "Rice 5 kg bag",
       "offer": "20 percent off",
@@ -36,7 +40,7 @@
     {
       "observation_id": "OBS-SCN-007-003",
       "reporter_id": "REP-018",
-      "reported_at": "2026-11-01T12:20:00+05:30",
+      "reported_at": "2026-11-23T12:20:00+05:30",
       "competitor_name": "ValueMart",
       "product_label": "Rice 5 kg bag",
       "offer": "20 percent off",
@@ -44,7 +48,12 @@
       "source_message_id": "DEMO-SCN-007-SECOND"
     }
   ],
-  "unknowns": ["competitor_price_verification", "promotion_start_date", "promotion_end_date", "observed_sell_through_impact"],
+  "unknowns": [
+    "competitor_price_verification",
+    "promotion_start_date",
+    "promotion_end_date",
+    "observed_sell_through_impact"
+  ],
   "expected": {
     "review_kind": "market_signal_review",
     "review_status": "pending_review",

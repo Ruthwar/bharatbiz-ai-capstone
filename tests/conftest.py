@@ -6,6 +6,8 @@ os.environ["LLM_PROVIDER"] = "none"
 os.environ["BHARATBIZ_LEDGER_DB"] = ":memory:"
 os.environ["BHARATBIZ_RETAIL_DB"] = ":memory:"
 os.environ["BHARATBIZ_RAG_DB"] = ":memory:"
+os.environ["BHARATBIZ_TRACE_DB"] = ":memory:"
+os.environ["BHARATBIZ_TRACE_EXPORT"] = "none"
 
 from pathlib import Path
 
@@ -27,7 +29,7 @@ def clear_retail_store():
 
 @pytest.fixture
 def state():
-    return load_business_state(expected_version="synthetic-v2-seed-20261105")
+    return load_business_state(expected_version="synthetic-v3-live-20261123")
 
 
 @pytest.fixture

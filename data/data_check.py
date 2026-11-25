@@ -23,7 +23,14 @@ EXPECTED_COUNTS = {
     "retailer_complaints": 25,
     "market_observations": 30,
     "cash_ledger": 30,
-    "scenarios": 8,
+    "scenarios": 14,
+    "retailer_credit_limits": 20,
+    "trade_schemes": 4,
+    "delivery_evidence": 2,
+    "batch_lots": 5,
+    "recall_notices": 1,
+    "dispatch_routes": 2,
+    "dispatch_orders": 6,
 }
 PRIMARY_KEYS = {
     "products": "sku_id",
@@ -38,6 +45,13 @@ PRIMARY_KEYS = {
     "market_observations": "observation_id",
     "cash_ledger": "entry_id",
     "scenarios": "scenario_id",
+    "retailer_credit_limits": "retailer_id",
+    "trade_schemes": "scheme_id",
+    "delivery_evidence": "evidence_id",
+    "batch_lots": "batch_id",
+    "recall_notices": "recall_id",
+    "dispatch_routes": "route_id",
+    "dispatch_orders": "order_id",
 }
 
 
@@ -133,6 +147,57 @@ def validate():
         _require(row["retailer_id"] in retailers, f"market_observations: unresolved {row['retailer_id']}")
         _require(row["sku_id"] in products, f"market_observations: unresolved {row['sku_id']}")
         date.fromisoformat(row["observed_date"])
+
+    for row in tables["retailer_credit_limits"]:
+        _require(row["retailer_id"] in retailers, f"retailer_credit_limits: unresolved {row['retailer_id']}")
+        _require_money(row["credit_limit_rupees"], f"{row['retailer_id']}: credit_limit_rupees")
+        _require(row["status"] == "active", f"{row['retailer_id']}: credit record is not active")
+        date.fromisoformat(row["reviewed_on"])
+    for row in tables["trade_schemes"]:
+        _require(row["sku_id"] in products, f"{row['scheme_id']}: unresolved {row['sku_id']}")
+        _require(row["supplier_id"] in suppliers, f"{row['scheme_id']}: unresolved {row['supplier_id']}")
+        _require_money(row["discount_percent"], f"{row['scheme_id']}: discount_percent")
+        _require(int(row["min_quantity_units"]) > 0, f"{row['scheme_id']}: minimum quantity must be positive")
+        _require(
+            date.fromisoformat(row["valid_to"]) >= date.fromisoformat(row["valid_from"]),
+            f"{row['scheme_id']}: validity ends before it starts",
+        )
+    for row in tables["delivery_evidence"]:
+        _require(row["retailer_id"] in retailers, f"{row['evidence_id']}: unresolved {row['retailer_id']}")
+        _require(row["sku_id"] in products, f"{row['evidence_id']}: unresolved {row['sku_id']}")
+        ordered = int(row["ordered_units"])
+        received = int(row["received_units"])
+        damaged = int(row["damaged_units"])
+        wrong = int(row["wrong_item_units"])
+        _require(received <= ordered, f"{row['evidence_id']}: received exceeds ordered")
+        _require(damaged + wrong <= received, f"{row['evidence_id']}: damage and wrong items exceed receipts")
+        _require(row["unit"] == next(item["base_unit"] for item in tables["products"] if item["sku_id"] == row["sku_id"]), f"{row['evidence_id']}: unit mismatch")
+        date.fromisoformat(row["checked_on"])
+    for row in tables["batch_lots"]:
+        _require(row["sku_id"] in products, f"{row['batch_id']}: unresolved {row['sku_id']}")
+        _require(row["supplier_id"] in suppliers, f"{row['batch_id']}: unresolved {row['supplier_id']}")
+        _require(
+            date.fromisoformat(row["expiry_date"]) > date.fromisoformat(row["manufactured_on"]),
+            f"{row['batch_id']}: expiry is not after manufacture",
+        )
+        _require(int(row["supplier_return_window_days"]) > 0, f"{row['batch_id']}: return window must be positive")
+        _require(row["unit"] == next(item["base_unit"] for item in tables["products"] if item["sku_id"] == row["sku_id"]), f"{row['batch_id']}: unit mismatch")
+    for row in tables["recall_notices"]:
+        batch = next((item for item in tables["batch_lots"] if item["batch_id"] == row["batch_id"]), None)
+        _require(batch is not None, f"{row['recall_id']}: unresolved batch {row['batch_id']}")
+        _require((row["sku_id"], row["supplier_id"]) == (batch["sku_id"], batch["supplier_id"]), f"{row['recall_id']}: batch scope mismatch")
+        _require(row["status"] == "open", f"{row['recall_id']}: unexpected recall status")
+        date.fromisoformat(row["issued_on"])
+    as_of = date.fromisoformat(state["as_of_date"])
+    for row in tables["dispatch_routes"]:
+        _require(int(row["capacity_units"]) > 0, f"{row['route_id']}: capacity must be positive")
+        _require(date.fromisoformat(row["departure_date"]) > as_of, f"{row['route_id']}: departure is not in the future")
+    open_orders = {row["order_id"]: row for row in tables["open_orders"]}
+    for row in tables["dispatch_orders"]:
+        _require(row["route_id"] in {item["route_id"] for item in tables["dispatch_routes"]}, f"dispatch_orders: unresolved {row['route_id']}")
+        order = open_orders.get(row["order_id"])
+        _require(order is not None, f"dispatch_orders: unresolved {row['order_id']}")
+        _require((row["sku_id"], row["retailer_id"], row["quantity_units"]) == (order["sku_id"], order["retailer_id"], order["quantity_units"]), f"dispatch_orders: {row['order_id']} differs from the order book")
 
     messages = _read_jsonl("messages")
     events = _read_jsonl("events")

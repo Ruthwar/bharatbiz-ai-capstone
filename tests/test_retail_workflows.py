@@ -13,7 +13,7 @@ from app.store.ledger import InboundLedger, ReviewDecisionError, ledger
 from app.store.retail import RetailStore, retail_store
 
 client = TestClient(app)
-STATE_VERSION = "synthetic-v2-seed-20261105"
+STATE_VERSION = "synthetic-v3-live-20261123"
 COMPLAINT = "Cooking oil 5 L tin arrived damaged in ORD-0016."
 
 
